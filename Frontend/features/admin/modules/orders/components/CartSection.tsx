@@ -33,6 +33,8 @@ interface CartSectionProps {
   onRemoveItem: (index: number) => void;
   onOpenExtrasModal: (index: number) => void;
   onContinueToCheckout: () => void;
+  canSell?: boolean;
+  cannotSellReason?: string;
 }
 
 const CartSection: React.FC<CartSectionProps> = ({
@@ -47,6 +49,8 @@ const CartSection: React.FC<CartSectionProps> = ({
   onRemoveItem,
   onOpenExtrasModal,
   onContinueToCheckout,
+  canSell = true,
+  cannotSellReason,
 }) => {
   // Estado interno para categorias de productos
   const [productCategories, setProductCategories] = useState<ProductCategory[]>(
@@ -397,8 +401,15 @@ const CartSection: React.FC<CartSectionProps> = ({
           <div className="grid gap-2 w-full">
             <Button
               size="lg"
-              disabled={items.length === 0}
+              disabled={items.length === 0 || !canSell}
               onClick={() => {
+                if (!canSell) {
+                  toast.error(
+                    cannotSellReason ||
+                      "No puedes vender sin una caja registradora abierta"
+                  );
+                  return;
+                }
                 if (items.length === 0) {
                   toast.error("Agrega al menos un producto para continuar");
                   return;
@@ -406,8 +417,11 @@ const CartSection: React.FC<CartSectionProps> = ({
                 onContinueToCheckout();
               }}
               className="w-full"
+              title={!canSell ? cannotSellReason : undefined}
             >
-              Datos del pedido / Cobrar
+              {!canSell
+                ? cannotSellReason || "Sin caja abierta"
+                : "Datos del pedido / Cobrar"}
             </Button>
             <Button
               variant="outline"

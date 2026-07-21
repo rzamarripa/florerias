@@ -161,7 +161,7 @@ const CashRegistersPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="shadow-sm rounded-[10px]">
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12">
@@ -169,18 +169,19 @@ const CashRegistersPage: React.FC = () => {
               <p className="text-muted-foreground mt-3">Cargando cajas registradoras...</p>
             </div>
           ) : (
+            <div className="p-4">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">#</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">NOMBRE</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SUCURSAL</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">CAJERO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">GERENTE</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SALDO ACTUAL</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ULTIMO CIERRE</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTADO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">#</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cajero</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Gerente</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Saldo Actual</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Último Cierre</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,37 +194,37 @@ const CashRegistersPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   cashRegisters.map((cashRegister, index) => (
-                    <TableRow key={cashRegister._id}>
-                      <TableCell className="px-2 py-2">
+                    <TableRow key={cashRegister._id} className="hover:bg-muted/30">
+                      <TableCell className="py-3 px-4">
                         {(pagination.page - 1) * pagination.limit + index + 1}
                       </TableCell>
-                      <TableCell className="px-2 py-2 font-semibold">
+                      <TableCell className="py-3 px-4 font-semibold">
                         {cashRegister.name}
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         {getBranchName(cashRegister)}
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <div className="font-semibold">
                           {getCashierName(cashRegister)}
                         </div>
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <div className="font-semibold">
                           {getManagerName(cashRegister)}
                         </div>
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <span className="font-bold text-green-600">
                           {formatCurrency(cashRegister.currentBalance)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <small className="text-muted-foreground">
                           {formatDate(cashRegister.lastOpen)}
                         </small>
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <div className="flex flex-col gap-1">
                           <Badge
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -254,7 +255,7 @@ const CashRegistersPage: React.FC = () => {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="px-2 py-2">
+                      <TableCell className="py-3 px-4">
                         <CashRegisterActions
                           cashRegister={cashRegister}
                           onCashRegisterUpdated={handleCashRegisterUpdated}
@@ -265,6 +266,7 @@ const CashRegistersPage: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
 
           {/* Pagination */}

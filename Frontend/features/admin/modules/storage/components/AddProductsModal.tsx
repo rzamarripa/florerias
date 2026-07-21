@@ -240,34 +240,34 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                     <small>Selecciona productos del menu de arriba</small>
                   </div>
                 ) : (
-                  <div className="rounded-md border">
+                  <div className="p-4">
                     <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="px-3 py-2 font-semibold text-muted-foreground">
-                            PRODUCTO
+                      <TableHeader className="bg-muted/40">
+                        <TableRow>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Producto
                           </TableHead>
-                          <TableHead className="px-3 py-2 font-semibold text-muted-foreground">
-                            UNIDAD
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Unidad
                           </TableHead>
-                          <TableHead className="px-3 py-2 font-semibold text-muted-foreground w-[150px]">
-                            CANTIDAD
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-[150px]">
+                            Cantidad
                           </TableHead>
-                          <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-center w-[80px]">
-                            ACCION
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center w-[80px]">
+                            Acción
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedProducts.map((product) => (
-                          <TableRow key={product._id}>
-                            <TableCell className="px-3 py-2 font-semibold">
+                          <TableRow key={product._id} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4 font-semibold">
                               {product.nombre}
                             </TableCell>
-                            <TableCell className="px-3 py-2">
+                            <TableCell className="py-3 px-4">
                               <Badge variant="secondary">{product.unidad}</Badge>
                             </TableCell>
-                            <TableCell className="px-3 py-2">
+                            <TableCell className="py-3 px-4">
                               <Input
                                 type="number"
                                 min="0"
@@ -281,7 +281,7 @@ const AddProductsModal: React.FC<AddProductsModalProps> = ({
                                 className="h-8"
                               />
                             </TableCell>
-                            <TableCell className="px-3 py-2 text-center">
+                            <TableCell className="py-3 px-4 text-center">
                               <Button
                                 variant="ghost"
                                 size="sm"

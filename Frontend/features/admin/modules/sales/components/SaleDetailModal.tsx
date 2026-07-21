@@ -472,35 +472,36 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
+                  <div className="p-4">
                   <Table>
-                    <TableHeader className="bg-gray-50">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          CANTIDAD
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Cantidad
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          PRODUCTO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Producto
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">TIPO</TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                          PRECIO UNIT.
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Tipo</TableHead>
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                          Precio unit.
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                          IMPORTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                          Importe
                         </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sale.items && sale.items.length > 0 ? (
                         sale.items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="px-4 py-3 font-semibold">
+                          <TableRow key={index} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4 font-semibold">
                               {item.quantity}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <div className="font-semibold">{item.productName}</div>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <Badge
                                 variant={item.isProduct ? "default" : "secondary"}
                                 className="text-white"
@@ -508,10 +509,10 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                                 {item.isProduct ? "Catalogo" : "Manual"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-right">
+                            <TableCell className="py-3 px-4 text-right">
                               {formatCurrency(item.unitPrice)}
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-right font-bold">
+                            <TableCell className="py-3 px-4 text-right font-bold">
                               {formatCurrency(item.amount)}
                             </TableCell>
                           </TableRow>
@@ -525,6 +526,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                       )}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -547,33 +549,34 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                       <p className="mb-0">No hay pagos adicionales registrados</p>
                     </div>
                   ) : (
+                    <div className="p-4">
                     <Table>
-                      <TableHeader className="bg-gray-50">
+                      <TableHeader className="bg-muted/40">
                         <TableRow>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                            FECHA
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Fecha
                           </TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                            METODO
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Método
                           </TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                            CAJA
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Caja
                           </TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                            REGISTRADO POR
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Registrado por
                           </TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                            NOTAS
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                            Notas
                           </TableHead>
-                          <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                            MONTO
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                            Monto
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {payments.map((payment) => (
-                          <TableRow key={payment._id}>
-                            <TableCell className="px-4 py-3">
+                          <TableRow key={payment._id} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4">
                               {new Date(payment.date).toLocaleString("es-MX", {
                                 year: "numeric",
                                 month: "2-digit",
@@ -582,32 +585,32 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                                 minute: "2-digit",
                               })}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <Badge>
                                 {payment.paymentMethod?.name || "N/A"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               {payment.cashRegisterId?.name || "N/A"}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               {payment.registeredBy?.username || "N/A"}
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-muted-foreground">
+                            <TableCell className="py-3 px-4 text-muted-foreground">
                               {payment.notes || "-"}
                             </TableCell>
-                            <TableCell className="px-4 py-3 font-bold text-green-500 text-right">
+                            <TableCell className="py-3 px-4 font-bold text-green-500 text-right">
                               {formatCurrency(payment.amount)}
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
-                      <TableFooter className="bg-gray-50">
+                      <TableFooter className="bg-muted/40 font-bold">
                         <TableRow>
-                          <TableCell colSpan={5} className="px-4 py-3 font-bold text-right">
+                          <TableCell colSpan={5} className="py-3 px-4 font-bold text-right">
                             Total pagos adicionales:
                           </TableCell>
-                          <TableCell className="px-4 py-3 font-bold text-green-500 text-right">
+                          <TableCell className="py-3 px-4 font-bold text-green-500 text-right">
                             {formatCurrency(
                               payments.reduce((sum, p) => sum + p.amount, 0)
                             )}
@@ -615,6 +618,7 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                         </TableRow>
                       </TableFooter>
                     </Table>
+                    </div>
                   )}
                 </CardContent>
               </Card>

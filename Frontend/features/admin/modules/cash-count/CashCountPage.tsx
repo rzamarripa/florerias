@@ -284,38 +284,39 @@ const CashCountPage: React.FC = () => {
               </div>
             </div>
           </div>
+          <div className="p-4">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                  FECHA CIERRE
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                  Fecha Cierre
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                  CAJA
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                  Caja
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                  SUCURSAL
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                  Sucursal
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                  CAJERO
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                  Cajero
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                  GERENTE
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                  Gerente
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  SALDO INICIAL
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                  Saldo Inicial
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  TOTAL VENTAS
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                  Total Ventas
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  TOTAL GASTOS
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                  Total Gastos
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  SALDO FINAL
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                  Saldo Final
                 </TableHead>
-                <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-center">
-                  ACCIONES
+                <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">
+                  Acciones
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -343,8 +344,8 @@ const CashCountPage: React.FC = () => {
                 </TableRow>
               ) : (
                 logs.map((log) => (
-                  <TableRow key={log._id} className="border-b border-border/50">
-                    <TableCell className="px-4 py-3">
+                  <TableRow key={log._id} className="hover:bg-muted/30">
+                    <TableCell className="py-3 px-4">
                       <div className="font-semibold">
                         {formatDate(log.closedAt)}
                       </div>
@@ -354,10 +355,10 @@ const CashCountPage: React.FC = () => {
                         </small>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <div className="font-semibold">{log.cashRegisterName}</div>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <Badge
                         variant="secondary"
                         className="px-3 py-1 rounded-full font-medium bg-blue-100 text-blue-800"
@@ -365,7 +366,7 @@ const CashCountPage: React.FC = () => {
                         {log.branchId.branchName}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       {log.cashierId ? (
                         <div>
                           <div className="font-semibold text-[13px]">
@@ -379,7 +380,7 @@ const CashCountPage: React.FC = () => {
                         <span className="text-muted-foreground">N/A</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <div>
                         <div className="font-semibold text-[13px]">
                           {log.managerId.profile.fullName}
@@ -389,27 +390,27 @@ const CashCountPage: React.FC = () => {
                         </small>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell className="py-3 px-4 text-right">
                       <span className="font-semibold">
                         {formatCurrency(log.totals.initialBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell className="py-3 px-4 text-right">
                       <span className="font-semibold text-green-600">
                         {formatCurrency(log.totals.totalSales)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell className="py-3 px-4 text-right">
                       <span className="font-semibold text-red-600">
                         {formatCurrency(log.totals.totalExpenses)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell className="py-3 px-4 text-right">
                       <span className="font-bold text-primary">
                         {formatCurrency(log.totals.finalBalance)}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-center">
+                    <TableCell className="py-3 px-4 text-center">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -425,6 +426,7 @@ const CashCountPage: React.FC = () => {
               )}
             </TableBody>
           </Table>
+          </div>
 
           {/* Pagination */}
           {!loading && logs.length > 0 && (

@@ -401,7 +401,7 @@ const CashRegisterSummaryPage: React.FC = () => {
       </div>
 
       {/* Totales Section */}
-      <Card className="shadow-sm mb-4 rounded-[15px]">
+      <Card className="shadow-sm mb-4 rounded-xl">
         <CardContent className="p-4">
           <h5 className="font-bold mb-4">Esta caja cuenta actualmente con:</h5>
 
@@ -446,7 +446,7 @@ const CashRegisterSummaryPage: React.FC = () => {
       </Card>
 
       {/* Sales Section with Tabs */}
-      <Card className="shadow-sm mb-4 rounded-[15px]">
+      <Card className="shadow-sm mb-4 rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <h5 className="font-bold mb-0">Detalle de Ventas</h5>
@@ -491,32 +491,33 @@ const CashRegisterSummaryPage: React.FC = () => {
               // Dynamic tab content for payments
               paymentMethods.map((methodName) => (
                 <TabsContent key={methodName} value={methodName} className="mt-0">
+                  <div className="p-4">
                   <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                           No.
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          TIPO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Tipo
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          FECHA
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Fecha
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          ORDEN
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Orden
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          CLIENTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Cliente
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          NOTAS
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Notas
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          REGISTRADO POR
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Registrado Por
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          IMPORTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Importe
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -535,11 +536,11 @@ const CashRegisterSummaryPage: React.FC = () => {
                         </TableRow>
                       ) : (
                         getPaginatedPaymentsForMethod(methodName, paginationState[methodName] || 1).map((payment, index) => (
-                          <TableRow key={payment._id}>
-                            <TableCell className="px-4 py-3">
+                          <TableRow key={payment._id} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4">
                               {((paginationState[methodName] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               {payment.isAdvance ? (
                                 <Badge className="bg-blue-500 text-white hover:bg-blue-500 px-2 py-0.5 text-xs font-semibold">
                                   ANTICIPO
@@ -550,10 +551,10 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <small>{formatDate(payment.date)}</small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <div className="font-semibold">
                                 {payment.orderNumber}
                               </div>
@@ -563,7 +564,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <div className="font-semibold">
                                 {payment.clientName}
                               </div>
@@ -571,17 +572,17 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 Para: {payment.recipientName}
                               </small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <small className="text-muted-foreground">
                                 {payment.notes || "-"}
                               </small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <small className="text-muted-foreground">
                                 {payment.registeredBy}
                               </small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <span
                                 className={`font-bold ${
                                   payment.orderStatus === "cancelado"
@@ -597,7 +598,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                       )}
                     </TableBody>
                   </Table>
-                  
+                  </div>
+
                   {/* Pagination controls */}
                   {summary.paymentsByMethod[methodName].payments.length > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -647,29 +649,30 @@ const CashRegisterSummaryPage: React.FC = () => {
               // Dynamic tab content for each payment method
               paymentMethods.map((methodName) => (
                 <TabsContent key={methodName} value={methodName} className="mt-0">
+                  <div className="p-4">
                   <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                           No.
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          FECHA
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Fecha
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          FORMA PAGO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Forma Pago
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          CLIENTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Cliente
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          VENTA
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Venta
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          DESCUENTO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Descuento
                         </TableHead>
-                        <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                          IMPORTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Importe
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -688,14 +691,14 @@ const CashRegisterSummaryPage: React.FC = () => {
                         </TableRow>
                       ) : (
                         getPaginatedOrdersForMethod(methodName, paginationState[methodName] || 1).map((order, index) => (
-                          <TableRow key={order._id}>
-                            <TableCell className="px-4 py-3">
+                          <TableRow key={order._id} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4">
                               {((paginationState[methodName] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <small>{formatDate(order.createdAt)}</small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               {order.paymentMethod
                                 .split(", ")
                                 .map((method, idx) => (
@@ -717,7 +720,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                                   </Badge>
                                 ))}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <div className="font-semibold">
                                 {order.clientName}
                               </div>
@@ -725,7 +728,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 Para: {order.recipientName}
                               </small>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <div className="flex flex-col gap-1">
                                 <div>{order.orderNumber}</div>
                                 <small className="text-muted-foreground">
@@ -746,7 +749,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               {order.discount && order.discount > 0 ? (
                                 <span className="font-bold text-orange-600">
                                   {formatCurrency(order.discount)}
@@ -755,7 +758,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 <span className="text-muted-foreground">-</span>
                               )}
                             </TableCell>
-                            <TableCell className="px-4 py-3">
+                            <TableCell className="py-3 px-4">
                               <span
                                 className={`font-bold ${
                                   order.status === "cancelado"
@@ -771,7 +774,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                       )}
                     </TableBody>
                   </Table>
-                  
+                  </div>
+
                   {/* Pagination controls */}
                   {summary.ordersByPaymentMethod[methodName].orders.length > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -863,29 +867,30 @@ const CashRegisterSummaryPage: React.FC = () => {
               // Fallback: keep the old static tabs structure
               <>
                 <TabsContent value="regular" className="mt-0">
+              <div className="p-4">
               <Table>
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                       No.
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FECHA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Fecha
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FORMA PAGO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Forma Pago
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      CLIENTE
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Cliente
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      VENTA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Venta
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      DESCUENTO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Descuento
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      IMPORTE
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Importe
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -904,14 +909,14 @@ const CashRegisterSummaryPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     getPaginatedData(regularOrders, paginationState['regular'] || 1).map((order, index) => (
-                      <TableRow key={order._id}>
-                        <TableCell className="px-4 py-3">
+                      <TableRow key={order._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {((paginationState['regular'] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <small>{formatDate(order.createdAt)}</small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           {order.paymentMethod
                             .split(", ")
                             .map((method, idx) => (
@@ -933,7 +938,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                               </Badge>
                             ))}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="font-semibold">
                             {order.clientName}
                           </div>
@@ -941,7 +946,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                             Para: {order.recipientName}
                           </small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="flex flex-col gap-1">
                             <div>{order.orderNumber}</div>
                             <small className="text-muted-foreground">
@@ -962,7 +967,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           {order.discount && order.discount > 0 ? (
                             <span className="font-bold text-orange-600">
                               {formatCurrency(order.discount)}
@@ -971,7 +976,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span
                             className={`font-bold ${
                               order.status === "cancelado"
@@ -987,7 +992,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
-              
+              </div>
+
               {/* Pagination controls for Regular Sales */}
               {regularOrders.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -1076,29 +1082,30 @@ const CashRegisterSummaryPage: React.FC = () => {
 
             {/* Credit Sales Tab */}
             <TabsContent value="credit" className="mt-0">
+              <div className="p-4">
               <Table>
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                       No.
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FECHA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Fecha
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      CLIENTE
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Cliente
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      VENTA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Venta
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      TOTAL
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Total
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      ABONADO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Abonado
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      SALDO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Saldo
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1117,14 +1124,14 @@ const CashRegisterSummaryPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     getPaginatedData(creditOrders, paginationState['credit'] || 1).map((order, index) => (
-                      <TableRow key={order._id}>
-                        <TableCell className="px-4 py-3">
+                      <TableRow key={order._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {((paginationState['credit'] || 1) - 1) * ITEMS_PER_PAGE + index + 1}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <small>{formatDate(order.createdAt)}</small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="font-semibold">
                             {order.clientName}
                           </div>
@@ -1132,7 +1139,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                             Para: {order.recipientName}
                           </small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="flex flex-col gap-1">
                             <div>{order.orderNumber}</div>
                             <small className="text-muted-foreground">
@@ -1146,17 +1153,17 @@ const CashRegisterSummaryPage: React.FC = () => {
                             </Badge>
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="font-bold">
                             {formatCurrency(order.total)}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="font-bold text-green-600">
                             {formatCurrency(order.advance)}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="font-bold text-red-600">
                             {formatCurrency(order.total - order.advance)}
                           </span>
@@ -1166,7 +1173,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
-              
+              </div>
+
               {/* Pagination controls for Credit Sales */}
               {creditOrders.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -1260,7 +1268,7 @@ const CashRegisterSummaryPage: React.FC = () => {
 
       {/* Sales Special Section with Tabs - Canceled Orders and Authorized Discounts */}
       {(summary?.canceledOrders?.length > 0 || summary?.authorizedDiscounts?.length > 0) && (
-        <Card className="shadow-sm mb-4 rounded-[15px]">
+        <Card className="shadow-sm mb-4 rounded-xl">
           <CardContent className="p-0">
             <div className="p-4 border-b">
               <h5 className="font-bold mb-0">Detalle de Ventas Especiales</h5>
@@ -1288,32 +1296,33 @@ const CashRegisterSummaryPage: React.FC = () => {
 
               {/* Canceled Orders Tab */}
               <TabsContent value="canceled" className="mt-0">
+                <div className="p-4">
                 <Table>
-                  <TableHeader className="bg-muted/50">
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                         No.
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        FECHA
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Fecha
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        NO. ORDEN
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        No. Orden
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        CLIENTE
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Cliente
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        DESTINATARIO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Destinatario
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        MÉTODO PAGO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Método Pago
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        TOTAL
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Total
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        ESTADO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Estado
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1332,27 +1341,27 @@ const CashRegisterSummaryPage: React.FC = () => {
                       </TableRow>
                     ) : (
                       getPaginatedData(summary.canceledOrders, salesCanceledPage).map((order, index) => (
-                        <TableRow key={order._id}>
-                          <TableCell className="px-4 py-3">
+                        <TableRow key={order._id} className="hover:bg-muted/30">
+                          <TableCell className="py-3 px-4">
                             {(salesCanceledPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <small>{formatDate(order.createdAt)}</small>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold">
                               {order.orderNumber}
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold">
                               {order.clientName}
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             {order.recipientName}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             {order.paymentMethod
                               .split(", ")
                               .map((method, idx) => (
@@ -1372,12 +1381,12 @@ const CashRegisterSummaryPage: React.FC = () => {
                                 </Badge>
                               ))}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <span className="font-bold line-through text-red-500">
                               {formatCurrency(order.total)}
                             </span>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <Badge className="bg-red-500 text-white hover:bg-red-500 px-2 py-0.5 text-xs font-semibold">
                               CANCELADA
                             </Badge>
@@ -1387,6 +1396,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
 
                 {/* Pagination controls for Canceled Orders */}
                 {summary?.canceledOrders && summary.canceledOrders.length > ITEMS_PER_PAGE && (
@@ -1425,35 +1435,36 @@ const CashRegisterSummaryPage: React.FC = () => {
 
               {/* Authorized Discounts Tab */}
               <TabsContent value="discounts" className="mt-0">
+                <div className="p-4">
                 <Table>
-                  <TableHeader className="bg-muted/50">
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                         No.
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        FECHA APROBACIÓN
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Fecha Aprobación
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        NO. ORDEN
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        No. Orden
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        SOLICITADO POR
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Solicitado Por
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        AUTORIZADO POR
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Autorizado Por
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        TIPO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Tipo
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        VALOR
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Valor
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        MONTO DESCUENTO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Monto Descuento
                       </TableHead>
-                      <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                        FOLIO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Folio
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1472,30 +1483,30 @@ const CashRegisterSummaryPage: React.FC = () => {
                       </TableRow>
                     ) : (
                       getPaginatedData(summary.authorizedDiscounts, salesDiscountsPage).map((auth, index) => (
-                        <TableRow key={auth._id}>
-                          <TableCell className="px-4 py-3">
+                        <TableRow key={auth._id} className="hover:bg-muted/30">
+                          <TableCell className="py-3 px-4">
                             {(salesDiscountsPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <small>{auth.approvedAt ? formatDate(auth.approvedAt) : formatDate(auth.createdAt)}</small>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold">
                               {auth.orderNumber}
                             </div>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             {auth.requestedBy}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             {auth.managerId}
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <Badge className="bg-blue-500 text-white hover:bg-blue-500 px-2 py-1 rounded-full text-xs">
                               {auth.discountType === 'porcentaje' ? 'PORCENTAJE' : 'CANTIDAD'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <span className="font-semibold">
                               {auth.discountType === 'porcentaje' 
                                 ? `${auth.discountValue}%` 
@@ -1503,12 +1514,12 @@ const CashRegisterSummaryPage: React.FC = () => {
                               }
                             </span>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <span className="font-bold text-orange-600">
                               {formatCurrency(auth.discountAmount)}
                             </span>
                           </TableCell>
-                          <TableCell className="px-4 py-3">
+                          <TableCell className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <Badge className="bg-green-500 text-white hover:bg-green-500 px-2 py-0.5 text-xs font-semibold">
                                 AUTORIZADO
@@ -1523,6 +1534,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
 
                 {/* Pagination controls for Authorized Discounts */}
                 {summary?.authorizedDiscounts && summary.authorizedDiscounts.length > ITEMS_PER_PAGE && (
@@ -1564,7 +1576,7 @@ const CashRegisterSummaryPage: React.FC = () => {
       )}
 
       {/* Expenses & Purchases Section with Tabs */}
-      <Card className="shadow-sm mb-4 rounded-[15px]">
+      <Card className="shadow-sm mb-4 rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <h5 className="font-bold mb-0">Gastos y Compras</h5>
@@ -1592,23 +1604,24 @@ const CashRegisterSummaryPage: React.FC = () => {
 
             {/* Expenses Tab */}
             <TabsContent value="expenses" className="mt-0">
+              <div className="p-4">
               <Table>
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FOLIO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Folio
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FECHA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Fecha
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      CONCEPTO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Concepto
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      USUARIO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Usuario
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      IMPORTE
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Importe
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1628,16 +1641,16 @@ const CashRegisterSummaryPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     getPaginatedData(summary.expenses, expensesPage).map((expense) => (
-                      <TableRow key={expense._id}>
-                        <TableCell className="px-4 py-3">
+                      <TableRow key={expense._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           <span className="font-semibold">
                             #{expense.folio}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <small>{formatDate(expense.paymentDate)}</small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="font-semibold">{expense.concept}</div>
                           {expense.conceptDescription && (
                             <small className="text-muted-foreground">
@@ -1645,12 +1658,12 @@ const CashRegisterSummaryPage: React.FC = () => {
                             </small>
                           )}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="text-muted-foreground">
                             {expense.user}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="font-bold text-red-600">
                             {formatCurrency(expense.total)}
                           </span>
@@ -1660,7 +1673,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
-              
+              </div>
+
               {/* Pagination controls for Expenses */}
               {summary.expenses && summary.expenses.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -1749,29 +1763,30 @@ const CashRegisterSummaryPage: React.FC = () => {
 
             {/* Purchases Tab */}
             <TabsContent value="purchases" className="mt-0">
+              <div className="p-4">
               <Table>
-                <TableHeader className="bg-muted/50">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FOLIO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Folio
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      FECHA
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Fecha
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      CONCEPTO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Concepto
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      PROVEEDOR
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Proveedor
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      MÉTODO PAGO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Método Pago
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      USUARIO
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Usuario
                     </TableHead>
-                    <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                      IMPORTE
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                      Importe
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1791,14 +1806,14 @@ const CashRegisterSummaryPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     getPaginatedData(summary.buys, purchasesPage).map((buy) => (
-                      <TableRow key={buy._id}>
-                        <TableCell className="px-4 py-3">
+                      <TableRow key={buy._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           <span className="font-semibold">#{buy.folio}</span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <small>{formatDate(buy.paymentDate)}</small>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <div className="font-semibold">{buy.concept}</div>
                           {buy.description && (
                             <small className="text-muted-foreground">
@@ -1806,22 +1821,22 @@ const CashRegisterSummaryPage: React.FC = () => {
                             </small>
                           )}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="text-muted-foreground">
                             {buy.provider || "Sin proveedor"}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <Badge className="bg-primary text-primary-foreground">
                             {buy.paymentMethod}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="text-muted-foreground">
                             {buy.user}
                           </span>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="py-3 px-4">
                           <span className="font-bold text-red-600">
                             {formatCurrency(buy.amount)}
                           </span>
@@ -1831,7 +1846,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
-              
+              </div>
+
               {/* Pagination controls for Purchases */}
               {summary.buys && summary.buys.length > 0 && (
                 <div className="flex items-center justify-between px-4 py-3 border-t">
@@ -1923,57 +1939,58 @@ const CashRegisterSummaryPage: React.FC = () => {
 
       {/* Discount Authorizations Section */}
       {summary.discountAuths && summary.discountAuths.length > 0 && (
-        <Card className="shadow-sm mb-4 rounded-[15px]">
+        <Card className="shadow-sm mb-4 rounded-xl">
           <CardContent className="p-0">
             <div className="p-4 border-b flex items-center">
               <ReceiptText size={20} className="mr-2" />
               <h5 className="font-bold mb-0">Soliciitudes de Descuento</h5>
             </div>
 
+            <div className="p-4">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/40">
                 <TableRow>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    ORDEN
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Orden
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    FECHA
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Fecha
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    SOLICITADO POR
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Solicitado Por
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    DESCUENTO
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Descuento
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    MENSAJE
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Mensaje
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    ESTADO
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Estado
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    FOLIO
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Folio
                   </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    GERENTE
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                    Gerente
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {getPaginatedData(summary.discountAuths, discountAuthsPage).map((auth) => (
-                  <TableRow key={auth._id}>
-                    <TableCell className="px-4 py-3">
+                  <TableRow key={auth._id} className="hover:bg-muted/30">
+                    <TableCell className="py-3 px-4">
                       <span className="font-semibold">{auth.orderNumber}</span>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <small>{formatDate(auth.createdAt)}</small>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <span className="text-muted-foreground">
                         {auth.requestedBy}
                       </span>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <span className="font-bold text-orange-600">
                         {auth.discountType === "porcentaje"
                           ? `${auth.discountValue}%`
@@ -1985,14 +2002,14 @@ const CashRegisterSummaryPage: React.FC = () => {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <div className="max-w-xs">
                         <small className="text-muted-foreground line-clamp-2">
                           {auth.message}
                         </small>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       {auth.isAuth === null ? (
                         <Badge className="bg-yellow-500 text-white hover:bg-yellow-500">
                           PENDIENTE
@@ -2012,7 +2029,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       {auth.authFolio ? (
                         <span className="font-mono font-bold text-primary">
                           {auth.authFolio}
@@ -2021,7 +2038,7 @@ const CashRegisterSummaryPage: React.FC = () => {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell className="py-3 px-4">
                       <span className="text-muted-foreground text-sm">
                         {auth.managerId}
                       </span>
@@ -2035,7 +2052,8 @@ const CashRegisterSummaryPage: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
-            
+            </div>
+
             {/* Pagination controls for Discount Authorizations */}
             {summary.discountAuths.length > 0 && (
               <div className="flex items-center justify-between px-4 py-3 border-t">

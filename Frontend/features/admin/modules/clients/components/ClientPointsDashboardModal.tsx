@@ -362,22 +362,22 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
                 </div>
               ) : (
                 <Table>
-                  <TableHeader className="bg-muted sticky top-0">
+                  <TableHeader className="bg-muted/40 sticky top-0">
                     <TableRow>
-                      <TableHead style={{ width: "35%" }}>Concepto</TableHead>
-                      <TableHead style={{ width: "20%" }}>Orden</TableHead>
-                      <TableHead className="text-right" style={{ width: "15%" }}>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground" style={{ width: "35%" }}>Concepto</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground" style={{ width: "20%" }}>Orden</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right" style={{ width: "15%" }}>
                         Puntos
                       </TableHead>
-                      <TableHead className="text-right" style={{ width: "30%" }}>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right" style={{ width: "30%" }}>
                         Fecha
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {history.map((item) => (
-                      <TableRow key={item._id}>
-                        <TableCell>
+                      <TableRow key={item._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <span
                               className={`flex items-center justify-center rounded ${
@@ -394,7 +394,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           {item.orderId ? (
                             <span className="bg-secondary/10 text-secondary text-sm px-2 py-1 rounded">
                               {item.orderId.orderNumber}
@@ -403,7 +403,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="py-3 px-4 text-right">
                           <span
                             className={`font-semibold ${
                               item.type === "earned"
@@ -415,7 +415,7 @@ const ClientPointsDashboardModal: React.FC<ClientPointsDashboardModalProps> = ({
                             {item.points}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground">
+                        <TableCell className="py-3 px-4 text-right text-sm text-muted-foreground">
                           {formatDate(item.createdAt)}
                         </TableCell>
                       </TableRow>

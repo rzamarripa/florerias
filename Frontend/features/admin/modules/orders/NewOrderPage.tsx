@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Store, Package, CreditCard, Search } from "lucide-react";
+import { Store, Package, CreditCard, Search, Wallet } from "lucide-react";
 import { ordersService } from "./services/orders";
 import { CreateOrderData, OrderItem } from "./types";
 import ProductCatalog from "./components/ProductCatalog";
@@ -44,6 +45,7 @@ import { createTicket } from "./services/tickets";
 import WhatsAppTicketModal from "./components/WhatsAppTicketModal";
 
 const NewOrderPage = () => {
+  const router = useRouter();
   const { getIsCashier, getIsSocialMedia } = useUserRoleStore();
   const { user } = useUserSessionStore();
   const isCashier = getIsCashier();
@@ -1436,6 +1438,40 @@ const NewOrderPage = () => {
         </Alert>
       )}
 
+      {/* Aviso: no puede vender sin una caja abierta (excepto flujo Redes) */}
+      {!isSocialMedia && !loadingCashRegister && (!cashRegister || !cashRegister.isOpen) && (
+        <Alert
+          variant="destructive"
+          className="mb-3 flex items-start gap-2 border-red-500 bg-red-50"
+        >
+          <Wallet size={20} className="text-red-600 mt-0.5" />
+          <div className="flex-1 flex items-center justify-between gap-3">
+            <AlertDescription className="flex-1">
+              <strong>
+                {!cashRegister
+                  ? "No tienes una caja registradora asignada"
+                  : "Tu caja registradora está cerrada"}
+              </strong>
+              <p className="mb-0 text-sm">
+                No podrás registrar ventas hasta que
+                {!cashRegister
+                  ? " se te asigne una caja."
+                  : " abras la caja desde el panel de cajas."}
+              </p>
+            </AlertDescription>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => router.push("/ventas/cajas")}
+              className="flex-shrink-0"
+            >
+              <Wallet size={16} className="mr-1" />
+              {!cashRegister ? "Ir a Cajas" : "Abrir Caja"}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
         {/* Catálogo (izquierda) */}
         <div className="lg:col-span-8 h-full flex flex-col">
@@ -1581,6 +1617,14 @@ const NewOrderPage = () => {
           onRemoveItem={handleRemoveItem}
           onOpenExtrasModal={handleOpenExtrasModal}
           onContinueToCheckout={() => setShowOrderDetailsModal(true)}
+          canSell={isSocialMedia || (!!cashRegister && cashRegister.isOpen)}
+          cannotSellReason={
+            !cashRegister
+              ? "No tienes una caja registradora asignada"
+              : !cashRegister.isOpen
+              ? "Tu caja registradora está cerrada"
+              : undefined
+          }
         />
       </div>
 

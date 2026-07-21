@@ -163,21 +163,22 @@ const ViewEventPaymentsModal: React.FC<ViewEventPaymentsModalProps> = ({
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">FECHA</TableHead>
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">METODO</TableHead>
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-right">MONTO</TableHead>
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">REGISTRADO POR</TableHead>
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground">NOTAS</TableHead>
-                    <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Método</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Monto</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Registrado por</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Notas</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payments.map((payment) => (
-                    <TableRow key={payment._id} className="border-b border-border/50">
-                      <TableCell className="px-3 py-2">
+                    <TableRow key={payment._id} className="hover:bg-muted/30">
+                      <TableCell className="py-3 px-4">
                         {new Date(payment.paymentDate).toLocaleDateString("es-MX")}
                         <br />
                         <small className="text-muted-foreground">
@@ -187,26 +188,26 @@ const ViewEventPaymentsModal: React.FC<ViewEventPaymentsModalProps> = ({
                           })}
                         </small>
                       </TableCell>
-                      <TableCell className="px-3 py-2">
+                      <TableCell className="py-3 px-4">
                         <Badge className="px-2 py-1">
                           {payment.paymentMethod.name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-right font-bold text-green-600">
+                      <TableCell className="py-3 px-4 text-right font-bold text-green-600">
                         ${payment.amount.toLocaleString("es-MX", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
                       </TableCell>
-                      <TableCell className="px-3 py-2">
+                      <TableCell className="py-3 px-4">
                         {payment.user.username}
                         <br />
                         <small className="text-muted-foreground">{payment.branch.branchName}</small>
                       </TableCell>
-                      <TableCell className="px-3 py-2">
+                      <TableCell className="py-3 px-4">
                         {payment.notes || "-"}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
+                      <TableCell className="py-3 px-4 text-center">
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -226,6 +227,7 @@ const ViewEventPaymentsModal: React.FC<ViewEventPaymentsModalProps> = ({
                   ))}
                 </TableBody>
               </Table>
+              </div>
 
               <div className="mt-3 p-3 rounded-lg bg-muted/50">
                 <div className="flex justify-between items-center">

@@ -238,25 +238,25 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                 </div>
 
                 <Table>
-                  <TableHeader className="bg-muted/50">
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                         No.
                       </TableHead>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                        FECHA
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Fecha
                       </TableHead>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                        FORMA PAGO
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Forma pago
                       </TableHead>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                        CLIENTE
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Cliente
                       </TableHead>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                        VENTA
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Venta
                       </TableHead>
-                      <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                        IMPORTE
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                        Importe
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -275,13 +275,13 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                       log.orders.map((order, index) => (
                         <TableRow
                           key={order._id || index}
-                          className="border-b border-border/50 text-[13px]"
+                          className="hover:bg-muted/30 border-b border-border/50 text-[13px]"
                         >
-                          <TableCell className="px-3 py-2">{index + 1}</TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">{index + 1}</TableCell>
+                          <TableCell className="py-3 px-4">
                             <small>{formatDate(order.saleDate)}</small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <Badge
                               className={`px-2 py-0.5 rounded-xl font-medium text-[0.7rem] ${
                                 order.paymentMethod
@@ -309,7 +309,7 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                               {order.paymentMethod}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold text-xs">
                               {order.clientName}
                             </div>
@@ -317,14 +317,14 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                               Para: {order.recipientName}
                             </small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <div className="text-xs">{order.orderNumber}</div>
                             <small className="text-muted-foreground text-[10px]">
                               {order.itemsCount}{" "}
                               {order.itemsCount === 1 ? "producto" : "productos"}
                             </small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <span className="font-bold text-[13px]">
                               {formatCurrency(order.advance)}
                             </span>
@@ -346,19 +346,19 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                   </div>
 
                   <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                           No.
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          FECHA
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Fecha
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          CONCEPTO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Concepto
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs text-right">
-                          IMPORTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                          Importe
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -366,18 +366,18 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                       {log.expenses.map((expense, index) => (
                         <TableRow
                           key={expense._id || index}
-                          className="border-b border-border/50 text-[13px]"
+                          className="hover:bg-muted/30 border-b border-border/50 text-[13px]"
                         >
-                          <TableCell className="px-3 py-2">{index + 1}</TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">{index + 1}</TableCell>
+                          <TableCell className="py-3 px-4">
                             <small>{formatDate(expense.expenseDate)}</small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold text-xs">
                               {expense.expenseConcept}
                             </div>
                           </TableCell>
-                          <TableCell className="px-3 py-2 text-right">
+                          <TableCell className="py-3 px-4 text-right">
                             <span className="font-bold text-red-600 text-[13px]">
                               {formatCurrency(expense.amount)}
                             </span>
@@ -401,25 +401,25 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                   </div>
 
                   <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          FOLIO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Folio
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          FECHA
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Fecha
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          CONCEPTO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Concepto
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          PROVEEDOR
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Proveedor
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs">
-                          USUARIO
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Usuario
                         </TableHead>
-                        <TableHead className="px-3 py-2 font-semibold text-muted-foreground text-xs text-right">
-                          IMPORTE
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+                          Importe
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -427,15 +427,15 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                       {log.buys.map((buy, index) => (
                         <TableRow
                           key={buy._id || index}
-                          className="border-b border-border/50 text-[13px]"
+                          className="hover:bg-muted/30 border-b border-border/50 text-[13px]"
                         >
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <span className="font-semibold">{buy.folio}</span>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <small>{formatDate(buy.paymentDate)}</small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold text-xs">
                               {buy.concept}
                             </div>
@@ -445,13 +445,13 @@ const CashCountDetailModal: React.FC<CashCountDetailModalProps> = ({
                               </small>
                             )}
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <small>{buy.provider}</small>
                           </TableCell>
-                          <TableCell className="px-3 py-2">
+                          <TableCell className="py-3 px-4">
                             <small>{buy.user}</small>
                           </TableCell>
-                          <TableCell className="px-3 py-2 text-right">
+                          <TableCell className="py-3 px-4 text-right">
                             <span className="font-bold text-[13px] text-amber-700">
                               {formatCurrency(buy.amount)}
                             </span>

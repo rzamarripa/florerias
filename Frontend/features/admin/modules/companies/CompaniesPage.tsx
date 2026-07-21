@@ -128,7 +128,7 @@ const CompaniesPage: React.FC = () => {
       />
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           {/* Filters */}
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
@@ -166,104 +166,106 @@ const CompaniesPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Razón Social</TableHead>
-                    <TableHead>RFC</TableHead>
-                    <TableHead>Nombre Comercial</TableHead>
-                    <TableHead>Administrador</TableHead>
-                    <TableHead>Usuarios Redes</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {companies.length === 0 ? (
+              <div className="p-4">
+                <Table>
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center py-12 text-muted-foreground"
-                      >
-                        <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <div>No se encontraron empresas</div>
-                        <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
-                      </TableCell>
+                      <TableHead className="w-12 py-3 px-4 font-semibold text-muted-foreground">#</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Razón social</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">RFC</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre comercial</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Administrador</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Usuarios redes</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                      <TableHead className="text-center py-3 px-4 font-semibold text-muted-foreground">Acciones</TableHead>
                     </TableRow>
-                  ) : (
-                    companies.map((company, index) => (
-                      <TableRow key={company._id}>
-                        <TableCell>
-                          {(pagination.page - 1) * pagination.limit + index + 1}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          <div className="flex items-center gap-3">
-                            {company.logoUrl ? (
-                              <img
-                                src={company.logoUrl}
-                                alt={company.tradeName || company.legalName}
-                                className="h-8 w-8 rounded-full object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            )}
-                            {company.legalName}
-                          </div>
-                        </TableCell>
-                        <TableCell>{company.rfc}</TableCell>
-                        <TableCell>{company.tradeName || "-"}</TableCell>
-                        <TableCell>
-                          {company.administrator ? (
-                            <div>
-                              <div className="font-semibold">
-                                {company.administrator.profile.fullName}
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {company.administrator.email}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Sin administrador
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {company.redes && company.redes.length > 0 ? (
-                            <div className="space-y-1">
-                              {company.redes.map((redesUser) => (
-                                <div key={redesUser._id}>
-                                  <div className="text-sm font-semibold">
-                                    {redesUser.profile.fullName}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              Sin usuarios redes
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={company.isActive ? "default" : "destructive"}>
-                            {company.isActive ? "Activo" : "Inactivo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <CompanyActions
-                            company={company}
-                            onCompanyUpdated={handleCompanyUpdated}
-                          />
+                  </TableHeader>
+                  <TableBody>
+                    {companies.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-12 text-muted-foreground"
+                        >
+                          <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <div>No se encontraron empresas</div>
+                          <p className="text-sm">Intenta ajustar los filtros de búsqueda</p>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      companies.map((company, index) => (
+                        <TableRow key={company._id} className="hover:bg-muted/30">
+                          <TableCell className="py-3 px-4">
+                            {(pagination.page - 1) * pagination.limit + index + 1}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 font-semibold">
+                            <div className="flex items-center gap-3">
+                              {company.logoUrl ? (
+                                <img
+                                  src={company.logoUrl}
+                                  alt={company.tradeName || company.legalName}
+                                  className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              {company.legalName}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">{company.rfc}</TableCell>
+                          <TableCell className="py-3 px-4">{company.tradeName || "-"}</TableCell>
+                          <TableCell className="py-3 px-4">
+                            {company.administrator ? (
+                              <div>
+                                <div className="font-semibold">
+                                  {company.administrator.profile.fullName}
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {company.administrator.email}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Sin administrador
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            {company.redes && company.redes.length > 0 ? (
+                              <div className="space-y-1">
+                                {company.redes.map((redesUser) => (
+                                  <div key={redesUser._id}>
+                                    <div className="text-sm font-semibold">
+                                      {redesUser.profile.fullName}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Sin usuarios redes
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <Badge variant={company.isActive ? "default" : "destructive"}>
+                              {company.isActive ? "Activo" : "Inactivo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <CompanyActions
+                              company={company}
+                              onCompanyUpdated={handleCompanyUpdated}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
               {/* Pagination */}
               {companies.length > 0 && (

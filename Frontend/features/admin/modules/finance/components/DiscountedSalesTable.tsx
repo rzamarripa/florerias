@@ -7,7 +7,6 @@ import { FinanceFilters, DiscountedSale } from "../types";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -99,83 +98,77 @@ const DiscountedSalesTable: React.FC<DiscountedSalesTableProps> = ({ filters }) 
   }
 
   return (
-    <div className="mb-4">
-      <Card className="shadow-sm rounded-[15px]">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">No.</TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    NO. ORDEN
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">CLIENTE</TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">SUCURSAL</TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    FECHA
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    SUBTOTAL
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    DESCUENTO
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                    TOTAL
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    ESTADO
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sales.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                      No se encontraron ventas con descuento
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  sales.map((sale, index) => (
-                    <TableRow
-                      key={sale._id}
-                      className="border-b border-muted/50 hover:bg-muted/30"
-                    >
-                      <TableCell className="px-4 py-3">{index + 1}</TableCell>
-                      <TableCell className="px-4 py-3 font-semibold">
-                        {sale.orderNumber}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        {sale.clientName}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        {sale.branchName}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">{formatDate(sale.createdAt)}</TableCell>
-                      <TableCell className="px-4 py-3">
-                        {formatCurrency(sale.subtotal)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <span className="text-destructive font-semibold">
-                          -{formatCurrency(sale.discount)}{" "}
-                          {sale.discountType && `(${formatDiscountType(sale.discountType)})`}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-right font-semibold">
-                        {formatCurrency(sale.total)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        {getStatusBadge(sale.status)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="p-4">
+      <Table>
+        <TableHeader className="bg-muted/40">
+          <TableRow>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              No. orden
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cliente</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Fecha
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Subtotal
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Descuento
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+              Total
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Estado
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sales.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                No se encontraron ventas con descuento
+              </TableCell>
+            </TableRow>
+          ) : (
+            sales.map((sale, index) => (
+              <TableRow
+                key={sale._id}
+                className="hover:bg-muted/30"
+              >
+                <TableCell className="py-3 px-4">{index + 1}</TableCell>
+                <TableCell className="py-3 px-4 font-semibold">
+                  {sale.orderNumber}
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  {sale.clientName}
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  {sale.branchName}
+                </TableCell>
+                <TableCell className="py-3 px-4">{formatDate(sale.createdAt)}</TableCell>
+                <TableCell className="py-3 px-4">
+                  {formatCurrency(sale.subtotal)}
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  <span className="text-destructive font-semibold">
+                    -{formatCurrency(sale.discount)}{" "}
+                    {sale.discountType && `(${formatDiscountType(sale.discountType)})`}
+                  </span>
+                </TableCell>
+                <TableCell className="py-3 px-4 text-right font-semibold">
+                  {formatCurrency(sale.total)}
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  {getStatusBadge(sale.status)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 };

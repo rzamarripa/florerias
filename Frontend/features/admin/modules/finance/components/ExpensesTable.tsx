@@ -7,7 +7,6 @@ import { FinanceFilters, Expense } from "../types";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -94,68 +93,62 @@ const ExpensesTable: React.FC<ExpensesTableProps> = ({ filters }) => {
   }
 
   return (
-    <div className="mb-4">
-      <Card className="shadow-sm rounded-[15px]">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">No.</TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    CONCEPTO
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    TIPO DE GASTO
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    SUCURSAL
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    FECHA PAGO
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
-                    REGISTRADO POR
-                  </TableHead>
-                  <TableHead className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                    TOTAL
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                      No se encontraron gastos
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  expenses.map((expense, index) => (
-                    <TableRow
-                      key={expense._id}
-                      className="border-b border-muted/50 hover:bg-muted/30"
-                    >
-                      <TableCell className="px-4 py-3">{index + 1}</TableCell>
-                      <TableCell className="px-4 py-3">{expense.concept}</TableCell>
-                      <TableCell className="px-4 py-3">
-                        {getExpenseTypeBadge(expense.expenseType)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">{expense.branchName}</TableCell>
-                      <TableCell className="px-4 py-3">
-                        {formatDate(expense.paymentDate)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">{expense.userName}</TableCell>
-                      <TableCell className="px-4 py-3 text-right font-semibold">
-                        {formatCurrency(expense.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="p-4">
+      <Table>
+        <TableHeader className="bg-muted/40">
+          <TableRow>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Concepto
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Tipo de gasto
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Sucursal
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Fecha pago
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+              Registrado por
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">
+              Total
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {expenses.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                No se encontraron gastos
+              </TableCell>
+            </TableRow>
+          ) : (
+            expenses.map((expense, index) => (
+              <TableRow
+                key={expense._id}
+                className="hover:bg-muted/30"
+              >
+                <TableCell className="py-3 px-4">{index + 1}</TableCell>
+                <TableCell className="py-3 px-4">{expense.concept}</TableCell>
+                <TableCell className="py-3 px-4">
+                  {getExpenseTypeBadge(expense.expenseType)}
+                </TableCell>
+                <TableCell className="py-3 px-4">{expense.branchName}</TableCell>
+                <TableCell className="py-3 px-4">
+                  {formatDate(expense.paymentDate)}
+                </TableCell>
+                <TableCell className="py-3 px-4">{expense.userName}</TableCell>
+                <TableCell className="py-3 px-4 text-right font-semibold">
+                  {formatCurrency(expense.total)}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 };

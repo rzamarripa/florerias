@@ -230,7 +230,7 @@ export default function CompanySalesPage() {
       )}
 
       {/* Main Table */}
-      <Card className="shadow-sm rounded-lg">
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center p-3">
@@ -238,39 +238,39 @@ export default function CompanySalesPage() {
               <span className="sr-only">Cargando...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="p-4">
               <Table>
-                <TableHeader className="bg-muted">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className=" px-4 py-2 text-sm font-bold">
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
                       Sucursal
                     </TableHead>
-                    <TableHead className=" text-center py-2 text-sm font-bold">
+                    <TableHead className="text-center py-3 px-4 font-semibold text-muted-foreground">
                       Código
                     </TableHead>
-                    <TableHead className=" text-center py-2 text-sm font-bold">
+                    <TableHead className="text-center py-3 px-4 font-semibold text-muted-foreground">
                       Órdenes
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
-                      Total Ventas
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                      Total ventas
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
                       Servicio
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
                       S/S
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
-                      Total Pagado
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                      Total pagado
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
                       Regalías
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
-                      Pub. Marca
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                      Pub. marca
                     </TableHead>
-                    <TableHead className=" text-right px-3 py-2 text-sm font-bold">
-                      Pub. Sucursal
+                    <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                      Pub. sucursal
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -283,36 +283,36 @@ export default function CompanySalesPage() {
                     </TableRow>
                   ) : (
                     branchesSales.map((branch) => (
-                      <TableRow key={branch.branchId}>
-                        <TableCell className="px-4 py-2">
+                      <TableRow key={branch.branchId} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           <span className="font-semibold">
                             {branch.branchName}
                           </span>
                         </TableCell>
-                        <TableCell className="text-center py-2">
+                        <TableCell className="text-center py-3 px-4">
                           <Badge variant="secondary">
                             {branch.branchCode}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-center py-2">
+                        <TableCell className="text-center py-3 px-4">
                           {branch.totalOrders}
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <span className="font-semibold">
                             {formatCurrency(branch.totalSales)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <span className="font-semibold">
                             {formatCurrency(branch.totalDeliveryService)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <span className="font-semibold text-green-500">
                             {formatCurrency(branch.totalSalesWithoutDelivery)}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <div>
                             <span className="font-semibold">
                               {formatCurrency(branch.totalPaid)}
@@ -330,7 +330,7 @@ export default function CompanySalesPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           {branch.royaltiesAmount === 0 ? (
                             <span className="text-muted-foreground">-</span>
                           ) : (
@@ -346,7 +346,7 @@ export default function CompanySalesPage() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <div>
                             <span className="font-semibold">
                               {formatCurrency(branch.brandAdvertisingAmount)}
@@ -358,7 +358,7 @@ export default function CompanySalesPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right px-3 py-2">
+                        <TableCell className="text-right py-3 px-4">
                           <div>
                             <span className="font-semibold">
                               {formatCurrency(branch.branchAdvertisingAmount)}

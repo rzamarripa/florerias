@@ -147,7 +147,7 @@ const BranchesPage: React.FC = () => {
       />
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1 max-w-md">
@@ -182,19 +182,20 @@ const BranchesPage: React.FC = () => {
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>RFC</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Ciudad</TableHead>
-                    <TableHead>Gerente</TableHead>
-                    <TableHead>Empleados</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-12">#</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Código</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">RFC</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Empresa</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Ciudad</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Gerente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Empleados</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -211,26 +212,26 @@ const BranchesPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     branches.map((branch, index) => (
-                      <TableRow key={branch._id}>
-                        <TableCell>
+                      <TableRow key={branch._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
-                        <TableCell className="font-semibold">{branch.branchName}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4 font-semibold">{branch.branchName}</TableCell>
+                        <TableCell className="py-3 px-4">
                           {branch.branchCode ? (
                             <Badge variant="secondary">{branch.branchCode}</Badge>
                           ) : (
                             "-"
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="outline">{branch.rfc}</Badge>
                         </TableCell>
-                        <TableCell>{getCompanyName(branch)}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">{getCompanyName(branch)}</TableCell>
+                        <TableCell className="py-3 px-4">
                           {branch.address.city}, {branch.address.state}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           {!branch.manager || typeof branch.manager === "string" ? (
                             <span className="text-muted-foreground">Sin gerente</span>
                           ) : (
@@ -240,15 +241,15 @@ const BranchesPage: React.FC = () => {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="secondary">{getEmployeesCount(branch)}</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant={branch.isActive ? "default" : "destructive"}>
                             {branch.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <BranchActions
                             branch={branch}
                             onBranchUpdated={handleBranchUpdated}
@@ -260,6 +261,7 @@ const BranchesPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               {branches.length > 0 && (

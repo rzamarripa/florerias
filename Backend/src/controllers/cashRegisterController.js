@@ -50,8 +50,16 @@ const getAllCashRegisters = async (req, res) => {
         filters._id = null;
       }
     } else if (userRole === 'gerente' || userRole === 'manager') {
-      // Los gerentes solo ven las cajas donde son managerId
-      filters.managerId = userId;
+      // Los gerentes ven todas las cajas de las sucursales que gestionan
+      const managerBranches = await Branch.find({ manager: userId }).select('_id');
+      const branchIds = managerBranches.map(branch => branch._id);
+
+      if (branchIds.length > 0) {
+        filters.branchId = { $in: branchIds };
+      } else {
+        // Si no tiene sucursales asignadas, no ver ninguna caja
+        filters._id = null;
+      }
     }
     // Si es Admin o Super Admin, puede ver todas las cajas (no se aplica filtro de usuario)
 

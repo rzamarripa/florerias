@@ -237,29 +237,29 @@ const BranchesModal: React.FC<BranchesModalProps> = ({
                     </Alert>
                   ) : (
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="bg-muted/40">
                         <TableRow>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Código</TableHead>
-                          <TableHead>RFC</TableHead>
-                          <TableHead>Ciudad</TableHead>
-                          <TableHead>Gerente</TableHead>
-                          <TableHead className="w-16 text-center">Acciones</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Código</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">RFC</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Ciudad</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Gerente</TableHead>
+                          <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-16 text-center">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {getSelectedBranches().map((branch) => (
-                          <TableRow key={branch._id}>
-                            <TableCell className="font-medium">{branch.branchName}</TableCell>
-                            <TableCell>{branch.branchCode || "N/A"}</TableCell>
-                            <TableCell>
+                          <TableRow key={branch._id} className="hover:bg-muted/30">
+                            <TableCell className="py-3 px-4 font-medium">{branch.branchName}</TableCell>
+                            <TableCell className="py-3 px-4">{branch.branchCode || "N/A"}</TableCell>
+                            <TableCell className="py-3 px-4">
                               <Badge variant="secondary">{branch.rfc}</Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3 px-4">
                               {branch.address.city}, {branch.address.state}
                             </TableCell>
-                            <TableCell>{branch.manager.name}</TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="py-3 px-4">{branch.manager.name}</TableCell>
+                            <TableCell className="py-3 px-4 text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"

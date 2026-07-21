@@ -817,24 +817,25 @@ const CompaniesDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="p-4">
               {weeklySalesData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-muted-foreground text-sm font-normal pl-0">
-                        SEMANA
-                      </TableHead>
-                      <TableHead className="text-muted-foreground text-sm font-normal text-right">
-                        VENTAS
-                      </TableHead>
-                      <TableHead className="text-muted-foreground text-sm font-normal text-right pr-0">
-                        INGRESOS
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {weeklySalesData.map((week, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="pl-0">
+                <div className="p-4">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow>
+                        <TableHead className="py-3 px-4 font-semibold text-muted-foreground">
+                          Semana
+                        </TableHead>
+                        <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                          Ventas
+                        </TableHead>
+                        <TableHead className="text-right py-3 px-4 font-semibold text-muted-foreground">
+                          Ingresos
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {weeklySalesData.map((week, index) => (
+                        <TableRow key={index} className="hover:bg-muted/30">
+                          <TableCell className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div
                               style={{
@@ -870,13 +871,13 @@ const CompaniesDashboard: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell
-                          className="text-right font-semibold"
+                          className="text-right py-3 px-4 font-semibold"
                           style={{ fontSize: "13px" }}
                         >
                           {week.orderCount}
                         </TableCell>
                         <TableCell
-                          className="text-right pr-0"
+                          className="text-right py-3 px-4"
                           style={{ fontSize: "13px" }}
                         >
                           <Badge variant="default" className="rounded-md bg-green-500">
@@ -887,6 +888,7 @@ const CompaniesDashboard: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground mb-0">
@@ -1374,38 +1376,39 @@ const CompaniesDashboard: React.FC = () => {
               style={{ maxHeight: "450px", overflowY: "auto" }}
             >
               {stats?.topBranches && stats.topBranches.length > 0 ? (
+                <div className="p-4">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-muted/40">
                     <TableRow>
                       <TableHead
-                        className=" text-muted-foreground text-sm"
-                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                        className="py-3 px-4 font-semibold text-muted-foreground"
+                        style={{ fontSize: "11px" }}
                       >
                         #
                       </TableHead>
                       <TableHead
-                        className=" text-muted-foreground text-sm"
-                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                        className="py-3 px-4 font-semibold text-muted-foreground"
+                        style={{ fontSize: "11px" }}
                       >
-                        SUCURSAL
+                        Sucursal
                       </TableHead>
                       <TableHead
-                        className=" text-muted-foreground text-sm text-center"
-                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                        className="text-center py-3 px-4 font-semibold text-muted-foreground"
+                        style={{ fontSize: "11px" }}
                       >
-                        EMPRESA
+                        Empresa
                       </TableHead>
                       <TableHead
-                        className=" text-muted-foreground text-sm text-center"
-                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                        className="text-center py-3 px-4 font-semibold text-muted-foreground"
+                        style={{ fontSize: "11px" }}
                       >
-                        ÓRDENES
+                        Órdenes
                       </TableHead>
                       <TableHead
-                        className=" text-muted-foreground text-sm text-right"
-                        style={{ fontSize: "11px", fontWeight: "normal" }}
+                        className="text-right py-3 px-4 font-semibold text-muted-foreground"
+                        style={{ fontSize: "11px" }}
                       >
-                        TOTAL VENTAS
+                        Total ventas
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1432,9 +1435,9 @@ const CompaniesDashboard: React.FC = () => {
                       };
 
                       return (
-                        <TableRow key={branch._id}>
+                        <TableRow key={branch._id} className="hover:bg-muted/30">
                           <TableCell
-                            className="align-middle"
+                            className="align-middle py-3 px-4"
                             style={{ width: "50px" }}
                           >
                             <Badge
@@ -1457,7 +1460,7 @@ const CompaniesDashboard: React.FC = () => {
                               {idx + 1}
                             </Badge>
                           </TableCell>
-                          <TableCell className="align-middle">
+                          <TableCell className="align-middle py-3 px-4">
                             <div>
                               <div
                                 className="font-semibold"
@@ -1475,7 +1478,7 @@ const CompaniesDashboard: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="align-middle text-center">
+                          <TableCell className="align-middle text-center py-3 px-4">
                             <Badge
                               variant="outline"
                               style={{ fontSize: "11px", fontWeight: "normal" }}
@@ -1483,7 +1486,7 @@ const CompaniesDashboard: React.FC = () => {
                               {companyName}
                             </Badge>
                           </TableCell>
-                          <TableCell className="align-middle text-center">
+                          <TableCell className="align-middle text-center py-3 px-4">
                             <span
                               className="font-semibold"
                               style={{ fontSize: "14px" }}
@@ -1491,7 +1494,7 @@ const CompaniesDashboard: React.FC = () => {
                               {branch.orderCount}
                             </span>
                           </TableCell>
-                          <TableCell className="align-middle text-right">
+                          <TableCell className="align-middle text-right py-3 px-4">
                             <div
                               className="font-bold"
                               style={{ fontSize: "15px", color: "#1ab394" }}
@@ -1504,6 +1507,7 @@ const CompaniesDashboard: React.FC = () => {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground mb-0">
