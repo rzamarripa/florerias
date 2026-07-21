@@ -379,7 +379,7 @@ const ClientsPage: React.FC = () => {
       )}
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <Select value={filterType} onValueChange={handleFilterTypeChange}>
@@ -442,19 +442,20 @@ const ClientsPage: React.FC = () => {
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>No. Cliente</TableHead>
-                    <TableHead>Teléfono</TableHead>
-                    <TableHead>Correo</TableHead>
-                    <TableHead>Género</TableHead>
-                    <TableHead>Puntos</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha Registro</TableHead>
-                    <TableHead className="text-center w-12">Acciones</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-12">#</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cliente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No. Cliente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Teléfono</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Correo</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Género</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Puntos</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Registro</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center w-12">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -473,11 +474,11 @@ const ClientsPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     clients.map((client, index) => (
-                      <TableRow key={client._id}>
-                        <TableCell>
+                      <TableRow key={client._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
@@ -492,34 +493,34 @@ const ClientsPage: React.FC = () => {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="secondary">{client.clientNumber}</Badge>
                         </TableCell>
-                        <TableCell>{client.phoneNumber}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">{client.phoneNumber}</TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="truncate max-w-[200px]">
                             {client.email || (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="secondary" className="capitalize">
                             {client.gender || 'No especificado'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="outline">{client.points} pts</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge
                             variant={client.status ? "default" : "destructive"}
                           >
                             {client.status ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{formatDate(client.createdAt)}</TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="py-3 px-4">{formatDate(client.createdAt)}</TableCell>
+                        <TableCell className="py-3 px-4 text-center">
                           <ClientActions
                             client={client}
                             onView={handleViewClient}
@@ -533,6 +534,7 @@ const ClientsPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               {clients.length > 0 && (

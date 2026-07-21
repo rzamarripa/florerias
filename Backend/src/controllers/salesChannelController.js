@@ -35,8 +35,8 @@ const getAllSalesChannels = async (req, res) => {
 
     const userRole = currentUser.role.name;
 
-    // Solo Gerentes, Cajeros y Super Admin pueden acceder a este módulo
-    if (userRole !== 'Gerente' && userRole !== 'Cajero' && userRole !== 'Super Admin') {
+    // Solo Administrador, Gerentes, Cajeros y Super Admin pueden acceder a este módulo
+    if (userRole !== 'Administrador' && userRole !== 'Gerente' && userRole !== 'Cajero' && userRole !== 'Super Admin') {
       return res.status(403).json({
         success: false,
         message: 'No tienes permisos para acceder a los canales de venta'
@@ -50,8 +50,21 @@ const getAllSalesChannels = async (req, res) => {
     if (companyId) {
       filters.companyId = companyId;
     } else {
+      // Si es Administrador, filtrar por la empresa que administra
+      if (userRole === 'Administrador') {
+        const adminCompany = await Company.findOne({ administrator: userId });
+        if (adminCompany) {
+          filters.companyId = adminCompany._id;
+        } else {
+          return res.status(200).json({
+            success: true,
+            data: [],
+            pagination: { page: parseInt(page), limit: parseInt(limit), total: 0, pages: 0 }
+          });
+        }
+      }
       // Si es Gerente, obtener su empresa a través de la sucursal donde es gerente
-      if (userRole === 'Gerente') {
+      else if (userRole === 'Gerente') {
         // Buscar la sucursal donde es gerente
         const managerBranch = await Branch.findOne({ manager: userId });
         
@@ -204,18 +217,27 @@ const createSalesChannel = async (req, res) => {
     const currentUser = await User.findById(userId).populate('role');
     const userRole = currentUser?.role?.name;
 
-    // Solo los gerentes pueden crear canales de venta
-    if (userRole !== 'Gerente' && userRole !== 'Super Admin') {
+    // Administrador, Gerente y Super Admin pueden crear canales de venta
+    if (userRole !== 'Administrador' && userRole !== 'Gerente' && userRole !== 'Super Admin') {
       return res.status(403).json({
         success: false,
         message: 'No tienes permisos para crear canales de venta'
       });
     }
 
-    // Obtener la empresa del gerente
+    // Obtener la empresa
     let finalCompanyId = null;
 
-    if (userRole === 'Gerente') {
+    if (userRole === 'Administrador') {
+      const adminCompany = await Company.findOne({ administrator: userId });
+      if (!adminCompany) {
+        return res.status(400).json({
+          success: false,
+          message: 'No se pudo determinar la empresa asociada al administrador'
+        });
+      }
+      finalCompanyId = adminCompany._id;
+    } else if (userRole === 'Gerente') {
       // Buscar la sucursal donde es gerente
       const managerBranch = await Branch.findOne({ manager: userId });
       
@@ -334,10 +356,18 @@ const updateSalesChannel = async (req, res) => {
     const userRole = currentUser?.role?.name;
 
     // Verificar permisos
-    if (userRole === 'Gerente') {
+    if (userRole === 'Administrador') {
+      const adminCompany = await Company.findOne({ administrator: userId });
+      if (!adminCompany || adminCompany._id.toString() !== existingSalesChannel.companyId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para editar este canal de venta'
+        });
+      }
+    } else if (userRole === 'Gerente') {
       // Verificar que el gerente pertenece a la misma empresa
       const managerBranch = await Branch.findOne({ manager: userId });
-      
+
       if (!managerBranch || managerBranch.companyId.toString() !== existingSalesChannel.companyId.toString()) {
         return res.status(403).json({
           success: false,
@@ -455,10 +485,18 @@ const deleteSalesChannel = async (req, res) => {
     const userRole = currentUser?.role?.name;
 
     // Verificar permisos
-    if (userRole === 'Gerente') {
+    if (userRole === 'Administrador') {
+      const adminCompany = await Company.findOne({ administrator: userId });
+      if (!adminCompany || adminCompany._id.toString() !== salesChannel.companyId.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permisos para eliminar este canal de venta'
+        });
+      }
+    } else if (userRole === 'Gerente') {
       // Verificar que el gerente pertenece a la misma empresa
       const managerBranch = await Branch.findOne({ manager: userId });
-      
+
       if (!managerBranch || managerBranch.companyId.toString() !== salesChannel.companyId.toString()) {
         return res.status(403).json({
           success: false,

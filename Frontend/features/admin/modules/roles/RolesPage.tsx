@@ -265,10 +265,10 @@ const RolesPage: React.FC = () => {
         </div>
 
         {/* Module Configuration */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 md:sticky md:top-4 md:self-start">
           {selectedRole ? (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="flex flex-col h-[calc(100vh-6rem)]">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-shrink-0">
                 <div>
                   <div className="flex items-center gap-2">
                     {isEditingName ? (
@@ -347,15 +347,15 @@ const RolesPage: React.FC = () => {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 min-h-0 flex flex-col">
                 {loading && !isEditing ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-muted-foreground mt-3">Cargando módulos...</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="relative">
+                  <div className="space-y-3 flex-1 min-h-0 flex flex-col">
+                    <div className="relative flex-shrink-0">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="text"
@@ -365,7 +365,7 @@ const RolesPage: React.FC = () => {
                         className="pl-9"
                       />
                     </div>
-                    <ScrollArea className="h-[460px] pr-4">
+                    <ScrollArea className="flex-1 min-h-0 pr-4">
                       {filteredPages.map((page: Page) => (
                       <div
                         key={page._id}

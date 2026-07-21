@@ -122,7 +122,7 @@ const ExpenseConceptsPage: React.FC = () => {
       />
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <div className="relative max-w-md">
@@ -143,15 +143,16 @@ const ExpenseConceptsPage: React.FC = () => {
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-12">#</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Descripción</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Departamento</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,27 +167,27 @@ const ExpenseConceptsPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     concepts.map((concept, index) => (
-                      <TableRow key={concept._id}>
-                        <TableCell>
+                      <TableRow key={concept._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
-                        <TableCell className="font-medium">{concept.name}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4 font-medium">{concept.name}</TableCell>
+                        <TableCell className="py-3 px-4">
                           {concept.description || (
                             <span className="text-muted-foreground italic">Sin descripción</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className="bg-info text-info-foreground">
                             {DEPARTMENT_LABELS[concept.department] || concept.department}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant={concept.isActive ? "default" : "destructive"}>
                             {concept.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <ExpenseConceptActions
                             concept={concept}
                             onEdit={handleEditConcept}
@@ -198,6 +199,7 @@ const ExpenseConceptsPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               {concepts.length > 0 && (

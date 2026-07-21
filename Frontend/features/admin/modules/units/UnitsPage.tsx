@@ -254,7 +254,7 @@ const UnitsPage: React.FC = () => {
       />
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1 max-w-md">
@@ -285,14 +285,15 @@ const UnitsPage: React.FC = () => {
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-16">No.</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Abreviatura</TableHead>
-                    <TableHead>Estatus</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-16">No.</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Abreviatura</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estatus</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -304,16 +305,16 @@ const UnitsPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     units.map((unit, index) => (
-                      <TableRow key={unit._id}>
-                        <TableCell>{(pagination.page - 1) * pagination.limit + index + 1}</TableCell>
-                        <TableCell className="font-medium">{unit.name}</TableCell>
-                        <TableCell>{unit.abbreviation}</TableCell>
-                        <TableCell>
+                      <TableRow key={unit._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">{(pagination.page - 1) * pagination.limit + index + 1}</TableCell>
+                        <TableCell className="py-3 px-4 font-medium">{unit.name}</TableCell>
+                        <TableCell className="py-3 px-4">{unit.abbreviation}</TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant={unit.status ? "default" : "destructive"}>
                             {unit.status ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex justify-center gap-2">
                             {(isAdmin || isManager) && (
                               <>
@@ -345,6 +346,7 @@ const UnitsPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               {units.length > 0 && (

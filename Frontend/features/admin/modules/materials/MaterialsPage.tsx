@@ -204,7 +204,7 @@ const MaterialsPage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1">
@@ -236,16 +236,16 @@ const MaterialsPage: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">No.</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">NOMBRE</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">UNIDAD</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">COSTO</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">PRECIO</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">DESCRIPCION</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTATUS</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Unidad</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Costo</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Precio</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Descripción</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estatus</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -257,16 +257,16 @@ const MaterialsPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     materials.map((material, index) => (
-                      <TableRow key={material._id} className="border-b border-muted">
-                        <TableCell className="px-2 py-2">{(pagination.page - 1) * pagination.limit + index + 1}</TableCell>
-                        <TableCell className="px-2 py-2 font-semibold">{material.name}</TableCell>
-                        <TableCell className="px-2 py-2">{material.unit?.name || "N/A"}</TableCell>
-                        <TableCell className="px-2 py-2">${material.cost.toFixed(2)}</TableCell>
-                        <TableCell className="px-2 py-2 font-semibold text-green-600">${material.price.toFixed(2)}</TableCell>
-                        <TableCell className="px-2 py-2 text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
+                      <TableRow key={material._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">{(pagination.page - 1) * pagination.limit + index + 1}</TableCell>
+                        <TableCell className="py-3 px-4 font-semibold">{material.name}</TableCell>
+                        <TableCell className="py-3 px-4">{material.unit?.name || "N/A"}</TableCell>
+                        <TableCell className="py-3 px-4">${material.cost.toFixed(2)}</TableCell>
+                        <TableCell className="py-3 px-4 font-semibold text-green-600">${material.price.toFixed(2)}</TableCell>
+                        <TableCell className="py-3 px-4 text-muted-foreground max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
                           {material.description || "Sin descripcion"}
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <Badge
                             variant={material.status ? "default" : "destructive"}
                             className={`px-2.5 py-0.5 rounded-xl font-medium ${material.status ? "bg-green-500 hover:bg-green-600" : ""}`}
@@ -274,7 +274,7 @@ const MaterialsPage: React.FC = () => {
                             {material.status ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <div className="flex justify-center gap-2">
                             {(isAdmin || isManager) && (
                               <>

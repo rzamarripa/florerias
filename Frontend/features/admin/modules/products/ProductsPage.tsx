@@ -133,7 +133,7 @@ const ProductsPage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1">
@@ -169,16 +169,17 @@ const ProductsPage: React.FC = () => {
               <p className="text-muted-foreground mt-3">Cargando productos...</p>
             </div>
           ) : (
+            <div className="p-4">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold text-muted-foreground">ORDEN</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">NOMBRE</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">DESCRIPCIÓN</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">COSTO</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">PRECIO</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground">ESTATUS</TableHead>
-                  <TableHead className="font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
+              <TableHeader className="bg-muted/40">
+                <TableRow>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Orden</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Descripción</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Costo</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Precio</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estatus</TableHead>
+                  <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -192,9 +193,9 @@ const ProductsPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   products.map((product) => (
-                    <TableRow key={product._id}>
-                      <TableCell>{product.orden}</TableCell>
-                      <TableCell>
+                    <TableRow key={product._id} className="hover:bg-muted/30">
+                      <TableCell className="py-3 px-4">{product.orden}</TableCell>
+                      <TableCell className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {product.imageUrl || product.imagen ? (
                             <img
@@ -213,7 +214,7 @@ const ProductsPage: React.FC = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3 px-4">
                         <div
                           className="truncate max-w-[300px]"
                           title={product.descripcion}
@@ -221,13 +222,13 @@ const ProductsPage: React.FC = () => {
                           {product.descripcion || "-"}
                         </div>
                       </TableCell>
-                      <TableCell className="text-green-600 font-medium">
+                      <TableCell className="py-3 px-4 text-green-600 font-medium">
                         ${(product.totalCosto || 0).toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-primary font-medium">
+                      <TableCell className="py-3 px-4 text-primary font-medium">
                         ${(product.totalVenta || 0).toFixed(2)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3 px-4">
                         <Badge
                           variant={product.estatus ? "default" : "destructive"}
                           className="rounded-full"
@@ -235,7 +236,7 @@ const ProductsPage: React.FC = () => {
                           {product.estatus ? "Activo" : "Inactivo"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3 px-4">
                         <div className="flex justify-center gap-2">
                           <Button
                             variant="ghost"
@@ -272,6 +273,7 @@ const ProductsPage: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
 
           {/* Paginacion */}

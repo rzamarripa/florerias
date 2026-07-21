@@ -54,7 +54,7 @@ const ExpensesPage: React.FC = () => {
       </div>
 
       {/* Tabs con Tablas */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <Tabs
             value={activeTab}

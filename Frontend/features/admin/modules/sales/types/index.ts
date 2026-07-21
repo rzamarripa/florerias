@@ -36,6 +36,7 @@ export interface Sale {
   cancellationReason?: string | null;
   cancelledAt?: string | null;
   cancelledBy?: string | { _id: string; name: string; email: string } | null;
+  deliveryPendingReason?: string | null;
   stage?: {
     _id: string;
     name: string;

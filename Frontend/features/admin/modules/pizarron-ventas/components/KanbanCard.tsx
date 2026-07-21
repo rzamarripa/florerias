@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Package, Send, CheckCircle } from "lucide-react";
+import { Calendar, User, Package, Send, CheckCircle, Truck, Store } from "lucide-react";
 import { useDrag } from "react-dnd";
 import { Order } from "../types";
 
@@ -17,6 +17,7 @@ interface KanbanCardProps {
   onViewDetails?: (order: Order) => void;
   onSendToShipping?: (order: Order) => void;
   onFinalizeOrder?: (order: Order) => void;
+  onDeliverToStore?: (order: Order) => void;
 }
 
 const KanbanCard: React.FC<KanbanCardProps> = ({
@@ -29,7 +30,8 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
   stageColor,
   onViewDetails,
   onSendToShipping,
-  onFinalizeOrder
+  onFinalizeOrder,
+  onDeliverToStore,
 }) => {
   // Configurar drag - no permitir drag si el estado es "completado" o si no tiene permisos
   const canDragCard = canDragProp && order.status !== "completado";
@@ -96,8 +98,8 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
         onClick={() => onViewDetails?.(order)}
       >
         <CardContent className="p-3">
-          {/* Header with Stage Badge */}
-          <div className="flex justify-between items-start mb-2">
+          {/* Header with Stage Badge + Shipping Type */}
+          <div className="flex justify-between items-start mb-2 gap-2">
             <Badge
               className="px-2 py-1 text-[0.7rem] font-semibold"
               style={{
@@ -106,6 +108,23 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
             >
               {stageName || getStatusText(order.status)}
             </Badge>
+            {order.shippingType === "envio" ? (
+              <Badge
+                variant="outline"
+                className="px-2 py-1 text-[0.7rem] font-semibold border-blue-500 text-blue-600 flex items-center gap-1"
+              >
+                <Truck size={12} />
+                Envío
+              </Badge>
+            ) : order.shippingType === "tienda" ? (
+              <Badge
+                variant="outline"
+                className="px-2 py-1 text-[0.7rem] font-semibold border-amber-500 text-amber-600 flex items-center gap-1"
+              >
+                <Store size={12} />
+                Tienda
+              </Badge>
+            ) : null}
           </div>
 
           {/* Order Number */}
@@ -167,8 +186,26 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
             </div>
           )}
 
-          {/* Send to Shipping Button - Only show in last production stage */}
-          {isLastProductionStage && onSendToShipping && (
+          {/* Last Production Stage: Entregado (tienda) o Enviar a Envío (envio) */}
+          {isLastProductionStage && order.shippingType === "tienda" && onDeliverToStore && (
+            <div className="mt-3">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold rounded-lg bg-green-600 hover:bg-green-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeliverToStore(order);
+                }}
+                title="Marcar como entregado"
+              >
+                <CheckCircle size={16} />
+                Entregado
+              </Button>
+            </div>
+          )}
+
+          {isLastProductionStage && order.shippingType !== "tienda" && onSendToShipping && (
             <div className="mt-3">
               <Button
                 variant={hasShippingStages ? "default" : "secondary"}
@@ -176,7 +213,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({
                 className="w-full flex items-center justify-center gap-2 text-xs font-semibold rounded-lg"
                 disabled={!hasShippingStages}
                 onClick={(e) => {
-                  e.stopPropagation(); // Evitar que se abra el modal de detalles
+                  e.stopPropagation();
                   if (hasShippingStages) {
                     onSendToShipping(order);
                   }

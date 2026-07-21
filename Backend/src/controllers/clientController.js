@@ -6,7 +6,7 @@ import { PointsReward } from "../models/PointsReward.js";
 import { DigitalCard } from "../models/DigitalCard.js";
 import { CardTransaction } from "../models/CardTransaction.js";
 import clientPointsService from "../services/clientPointsService.js";
-import { createSafeRegexFilter } from "../utils/sanitize.js";
+import { createSafeRegexFilter, escapeRegex } from "../utils/sanitize.js";
 import qrCodeService from "../services/digitalCards/qrCodeService.js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -50,15 +50,21 @@ export const getAllClients = async (req, res) => {
     const phoneNumberFilter = createSafeRegexFilter(req.query.phoneNumber);
     if (phoneNumberFilter) filters.phoneNumber = phoneNumberFilter;
 
-    // Búsqueda unificada: coincide en nombre, apellido, teléfono o número de cliente
-    const searchFilter = createSafeRegexFilter(req.query.search);
-    if (searchFilter) {
-      filters.$or = [
-        { name: searchFilter },
-        { lastName: searchFilter },
-        { phoneNumber: searchFilter },
-        { clientNumber: searchFilter },
-      ];
+    // Búsqueda unificada: cada palabra debe aparecer en alguno de los campos
+    // (name, lastName, phoneNumber, clientNumber). Con collation ignora acentos y mayúsculas.
+    if (typeof req.query.search === "string" && req.query.search.trim() !== "") {
+      const tokens = req.query.search.trim().split(/\s+/);
+      filters.$and = tokens.map((token) => {
+        const regex = { $regex: escapeRegex(token), $options: "i" };
+        return {
+          $or: [
+            { name: regex },
+            { lastName: regex },
+            { phoneNumber: regex },
+            { clientNumber: regex },
+          ],
+        };
+      });
     }
 
     if (req.query.gender) {
@@ -69,7 +75,10 @@ export const getAllClients = async (req, res) => {
       filters.status = req.query.status === "true";
     }
 
+    const collation = { locale: "es", strength: 1 };
+
     const clients = await Client.find(filters)
+      .collation(collation)
       .populate("purchases")
       .populate("company")
       .populate("branch", "branchName branchCode")
@@ -77,7 +86,7 @@ export const getAllClients = async (req, res) => {
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    const total = await Client.countDocuments(filters);
+    const total = await Client.countDocuments(filters).collation(collation);
 
     const transformedClients = clients.map((client) => {
       const clientObj = client.toObject();

@@ -305,6 +305,11 @@ const orderSchema = new mongoose.Schema({
     trim: true,
     default: null
   },
+  deliveryPendingReason: {
+    type: String,
+    trim: true,
+    default: null
+  },
   cancelledAt: {
     type: Date,
     default: null

@@ -314,7 +314,7 @@ const StoragePage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card className="shadow-sm rounded-lg">
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-b">
             <div className="relative">
@@ -369,30 +369,18 @@ const StoragePage: React.FC = () => {
               <p className="text-muted-foreground mt-3">Cargando almacenes...</p>
             </div>
           ) : (
-            <div className="rounded-md">
+            <div className="p-4">
               <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">#</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
-                      SUCURSAL
-                    </TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
-                      GERENTE
-                    </TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
-                      PRODUCTOS
-                    </TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
-                      CANTIDAD TOTAL
-                    </TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">
-                      ULTIMO INGRESO
-                    </TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTADO</TableHead>
-                    <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">
-                      ACCIONES
-                    </TableHead>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">#</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Gerente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Productos</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cantidad Total</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Último Ingreso</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -405,14 +393,11 @@ const StoragePage: React.FC = () => {
                     </TableRow>
                   ) : (
                     storages.map((storage, index) => (
-                      <TableRow
-                        key={storage._id}
-                        className="border-b border-muted/30"
-                      >
-                        <TableCell className="px-2 py-2">
+                      <TableRow key={storage._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <div>
                             <div className="font-semibold">
                               {getBranchName(storage)}
@@ -424,21 +409,21 @@ const StoragePage: React.FC = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-2 py-2">{getManagerName(storage)}</TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">{getManagerName(storage)}</TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant="secondary" className="rounded-full">
                             {getProductsCount(storage)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <Badge className="rounded-full">
                             {getTotalQuantity(storage)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <small>{formatDate(storage.lastIncome)}</small>
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <Badge
                             variant={storage.isActive ? "default" : "destructive"}
                             className="px-2.5 py-0.5 rounded-xl font-medium"
@@ -446,7 +431,7 @@ const StoragePage: React.FC = () => {
                             {storage.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="px-2 py-2">
+                        <TableCell className="py-3 px-4">
                           <StorageActions
                             storage={storage}
                             onStorageUpdated={handleStorageUpdated}

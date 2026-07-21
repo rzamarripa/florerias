@@ -39,6 +39,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+// Rango de la semana actual (lunes a domingo) en formato yyyy-mm-dd
+const getCurrentWeekRange = (): { start: string; end: string } => {
+  const now = new Date();
+  const day = now.getDay(); // 0=domingo ... 6=sábado
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + ((day === 0 ? -6 : 1) - day));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+  return { start: fmt(monday), end: fmt(sunday) };
+};
+
 const CashCountPage: React.FC = () => {
   const { activeBranch } = useActiveBranchStore();
   const { getIsCashier, getIsAdmin } = useUserRoleStore();
@@ -50,12 +65,15 @@ const CashCountPage: React.FC = () => {
   const [cashRegisters, setCashRegisters] = useState<CashRegisterRef[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [filters, setFilters] = useState({
-    cashRegisterId: "",
-    startDate: "",
-    endDate: "",
-    page: 1,
-    limit: 10,
+  const [filters, setFilters] = useState(() => {
+    const week = getCurrentWeekRange();
+    return {
+      cashRegisterId: "",
+      startDate: week.start,
+      endDate: week.end,
+      page: 1,
+      limit: 10,
+    };
   });
 
   const [pagination, setPagination] = useState({
@@ -131,10 +149,11 @@ const CashCountPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
+    const week = getCurrentWeekRange();
     setFilters({
       cashRegisterId: "",
-      startDate: "",
-      endDate: "",
+      startDate: week.start,
+      endDate: week.end,
       page: 1,
       limit: 10,
     });
@@ -181,7 +200,7 @@ const CashCountPage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <div
@@ -266,7 +285,7 @@ const CashCountPage: React.FC = () => {
             </div>
           </div>
           <Table>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/40">
               <TableRow>
                 <TableHead className="px-4 py-3 font-semibold text-muted-foreground">
                   FECHA CIERRE

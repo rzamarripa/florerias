@@ -30,9 +30,16 @@ export function CommandPalette() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  // Evita mismatch de hidratación: el acceso depende de stores del cliente,
+  // así que no renderizamos nada hasta montar en el navegador.
+  const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
   const { getIsAdmin, getIsSuperAdmin, getIsCashier, getIsManager } = useUserRoleStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if user has permission to use the command palette
   const hasAccess = getIsAdmin() || getIsSuperAdmin() || getIsCashier() || getIsManager();
@@ -135,8 +142,8 @@ export function CommandPalette() {
     }).format(amount);
   };
 
-  // Don't render if user doesn't have access
-  if (!hasAccess) {
+  // No renderizar en SSR ni si el usuario no tiene acceso (evita hydration mismatch)
+  if (!mounted || !hasAccess) {
     return null;
   }
 

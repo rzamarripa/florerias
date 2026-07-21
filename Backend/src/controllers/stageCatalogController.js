@@ -743,18 +743,57 @@ export const getUserStages = async (req, res) => {
       }
 
       companyId = branch.companyId._id;
+    } else if (
+      userRole === "Cajero" ||
+      userRole === "Produccion" ||
+      userRole === "Producción" ||
+      userRole === "Repartidor"
+    ) {
+      // Buscar la sucursal donde el usuario es empleado (cajero, producción o repartidor)
+      const branch = await Branch.findOne({
+        $or: [
+          { employees: req.user._id },
+          { cashiers: req.user._id },
+        ],
+      }).populate("companyId");
+
+      if (!branch || !branch.companyId) {
+        return res.status(404).json({
+          success: false,
+          message: "No tienes una sucursal asignada o la sucursal no tiene empresa asociada",
+        });
+      }
+
+      companyId = branch.companyId._id;
+    } else if (userRole === "Redes") {
+      // Redes: obtener la empresa donde está en el array redes
+      const company = await Company.findOne({ redes: req.user._id });
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: "No tienes una empresa asignada",
+        });
+      }
+      companyId = company._id;
+    } else if (userRole === "Super Admin") {
+      // Super Admin: si envía companyId por query, usarlo; si no, no filtrar por empresa
+      if (req.query.companyId) {
+        companyId = req.query.companyId;
+      }
     } else {
       return res.status(403).json({
         success: false,
-        message: "No tienes permisos para ver las etapas. Solo Administradores y Gerentes pueden acceder al pizarrón de ventas.",
+        message: "No tienes permisos para ver las etapas del pizarrón.",
       });
     }
 
     // Construir filtros
     const filters = {
-      company: companyId,
       isActive: true, // Solo etapas activas
     };
+    if (companyId) {
+      filters.company = companyId;
+    }
 
     // Filtrar por tipo de tablero si se especifica
     if (req.query.boardType) {

@@ -39,6 +39,7 @@ import {
   StageColor,
 } from "./types";
 import KanbanColumn from "./components/KanbanColumn";
+import DeliverPendingReasonDialog from "./components/DeliverPendingReasonDialog";
 
 const PizarronVentasPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -49,6 +50,8 @@ const PizarronVentasPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [orderPayments, setOrderPayments] = useState<OrderPayment[]>([]);
+  const [deliverReasonOrder, setDeliverReasonOrder] = useState<Order | null>(null);
+  const [deliveringOrder, setDeliveringOrder] = useState<boolean>(false);
 
   // Stages dinamicos
   const [productionStages, setProductionStages] = useState<StageCatalog[]>([]);
@@ -338,6 +341,35 @@ const PizarronVentasPage: React.FC = () => {
     }
   };
 
+  const finalizeOrderAsDelivered = async (
+    order: Order,
+    deliveryPendingReason?: string
+  ) => {
+    try {
+      setDeliveringOrder(true);
+      await ordersService.updateOrderStatus(order._id, {
+        status: "finalizado",
+        ...(deliveryPendingReason ? { deliveryPendingReason } : {}),
+      });
+      toast.success("Orden marcada como entregada");
+      setDeliverReasonOrder(null);
+      await loadOrders();
+    } catch (error: any) {
+      toast.error(error.message || "Error al marcar la orden como entregada");
+      console.error("Error delivering order:", error);
+    } finally {
+      setDeliveringOrder(false);
+    }
+  };
+
+  const handleDeliverToStore = async (order: Order) => {
+    if ((order.remainingBalance || 0) > 0) {
+      setDeliverReasonOrder(order);
+      return;
+    }
+    await finalizeOrderAsDelivered(order);
+  };
+
   const handleSendToShipping = async (order: Order) => {
     // Verificar que haya etapas de Envio configuradas ANTES de enviar
     if (!shippingStages || shippingStages.length === 0) {
@@ -516,6 +548,7 @@ const PizarronVentasPage: React.FC = () => {
                   onViewDetails={handleViewDetails}
                   onChangeStatus={handleChangeStage}
                   onSendToShipping={handleSendToShipping}
+                  onDeliverToStore={handleDeliverToStore}
                 />
               </div>
             ))}
@@ -721,6 +754,20 @@ const PizarronVentasPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de motivo por entrega con saldo pendiente */}
+      <DeliverPendingReasonDialog
+        show={!!deliverReasonOrder}
+        onHide={() => setDeliverReasonOrder(null)}
+        onConfirm={(reason) => {
+          if (deliverReasonOrder) {
+            finalizeOrderAsDelivered(deliverReasonOrder, reason);
+          }
+        }}
+        orderNumber={deliverReasonOrder?.orderNumber}
+        remainingBalance={deliverReasonOrder?.remainingBalance || 0}
+        isProcessing={deliveringOrder}
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { Branch } from "../models/Branch.js";
 import { Company } from "../models/Company.js";
 import { User } from "../models/User.js";
 import { Role } from "../models/Roles.js";
+import Order from "../models/Order.js";
 
 // Crear nueva sucursal
 export const createBranch = async (req, res) => {
@@ -171,6 +172,8 @@ export const createBranch = async (req, res) => {
       advertisingBrandPercentage: advertisingBrandPercentage || 0,
       deliveryTracking: {
         shippingLimit: deliveryTracking?.shippingLimit || 0,
+        hourlyArrangementCapacity: deliveryTracking?.hourlyArrangementCapacity || 0,
+        hourlyShippingCapacity: deliveryTracking?.hourlyShippingCapacity || 0,
       },
       employees: employees || [],
     });
@@ -492,6 +495,8 @@ export const updateBranch = async (req, res) => {
     if (advertisingBranchPercentage !== undefined) updateData.advertisingBranchPercentage = advertisingBranchPercentage;
     if (advertisingBrandPercentage !== undefined) updateData.advertisingBrandPercentage = advertisingBrandPercentage;
     if (deliveryTracking?.shippingLimit !== undefined) updateData['deliveryTracking.shippingLimit'] = deliveryTracking.shippingLimit;
+    if (deliveryTracking?.hourlyArrangementCapacity !== undefined) updateData['deliveryTracking.hourlyArrangementCapacity'] = deliveryTracking.hourlyArrangementCapacity;
+    if (deliveryTracking?.hourlyShippingCapacity !== undefined) updateData['deliveryTracking.hourlyShippingCapacity'] = deliveryTracking.hourlyShippingCapacity;
 
     // Manejar actualización del gerente
     if (managerId !== undefined) {
@@ -1206,6 +1211,85 @@ export const getDailyDeliveryStatus = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Obtener estado de capacidad por hora para una sucursal en una fecha/hora dada
+// Query: ?dateTime=YYYY-MM-DDTHH:mm (o ISO). Excluye la orden con id ?excludeOrderId si viene.
+export const getHourlyCapacityStatus = async (req, res) => {
+  try {
+    const branchId = req.params.id;
+    const { dateTime, excludeOrderId } = req.query;
+
+    if (!dateTime) {
+      return res.status(400).json({
+        success: false,
+        message: "dateTime es requerido",
+      });
+    }
+
+    const branch = await Branch.findById(branchId).select("deliveryTracking");
+    if (!branch) {
+      return res.status(404).json({
+        success: false,
+        message: "Sucursal no encontrada",
+      });
+    }
+
+    const hourlyArrangementCapacity =
+      branch.deliveryTracking?.hourlyArrangementCapacity || 0;
+    const hourlyShippingCapacity =
+      branch.deliveryTracking?.hourlyShippingCapacity || 0;
+
+    // Franja horaria exacta: [inicio de hora, inicio de la siguiente)
+    const start = new Date(dateTime);
+    start.setMinutes(0, 0, 0);
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+
+    const baseMatch = {
+      branchId: branch._id,
+      status: { $ne: "cancelado" },
+      "deliveryData.deliveryDateTime": { $gte: start, $lt: end },
+    };
+    if (excludeOrderId) {
+      baseMatch._id = { $ne: excludeOrderId };
+    }
+
+    const arrangementCount = await Order.countDocuments(baseMatch);
+    const shippingCount = await Order.countDocuments({
+      ...baseMatch,
+      shippingType: "envio",
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        window: { start, end },
+        arrangements: {
+          capacity: hourlyArrangementCapacity,
+          used: arrangementCount,
+          remaining: Math.max(0, hourlyArrangementCapacity - arrangementCount),
+          overLimit:
+            hourlyArrangementCapacity > 0 &&
+            arrangementCount >= hourlyArrangementCapacity,
+        },
+        shipping: {
+          capacity: hourlyShippingCapacity,
+          used: shippingCount,
+          remaining: Math.max(0, hourlyShippingCapacity - shippingCount),
+          overLimit:
+            hourlyShippingCapacity > 0 &&
+            shippingCount >= hourlyShippingCapacity,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error en getHourlyCapacityStatus:", error);
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

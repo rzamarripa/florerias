@@ -127,7 +127,7 @@ const EventsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <Card className="shadow-sm rounded-[10px]">
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-10">
@@ -135,71 +135,73 @@ const EventsPage: React.FC = () => {
               <p className="text-muted-foreground mt-3">Cargando eventos...</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FOLIO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">CLIENTE</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FECHA EVENTO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FECHA PEDIDO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ESTATUS PAGO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-right">TOTAL</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-right">TOTAL PAGADO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-right">SALDO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SUCURSAL</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-center">ACCIONES</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.length === 0 ? (
+            <div className="p-4">
+              <Table>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
-                      No se encontraron eventos
-                    </TableCell>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Folio</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cliente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Evento</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Pedido</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estatus Pago</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Total</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Total Pagado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Saldo</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
-                ) : (
-                  events.map((event) => (
-                    <TableRow key={event._id} className="border-b border-border/50">
-                      <TableCell className="px-2 py-2 font-semibold">{event.folio}</TableCell>
-                      <TableCell className="px-2 py-2">
-                        {event.client?.name} {event.client?.lastName}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {new Date(event.eventDate).toLocaleDateString("es-MX")}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {new Date(event.orderDate).toLocaleDateString("es-MX")}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {getPaymentStatusBadge(event.paymentStatus)}
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-right font-semibold">
-                        ${event.totalAmount.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-right">
-                        ${event.totalPaid.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-right">
-                        ${event.balance.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">{event.branch?.branchName || "N/A"}</TableCell>
-                      <TableCell className="px-2 py-2">
-                        <EventActions event={event} onEventSaved={handleEventSaved} />
+                </TableHeader>
+                <TableBody>
+                  {events.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                        No se encontraron eventos
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    events.map((event) => (
+                      <TableRow key={event._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4 font-semibold">{event.folio}</TableCell>
+                        <TableCell className="py-3 px-4">
+                          {event.client?.name} {event.client?.lastName}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {new Date(event.eventDate).toLocaleDateString("es-MX")}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {new Date(event.orderDate).toLocaleDateString("es-MX")}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {getPaymentStatusBadge(event.paymentStatus)}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-semibold">
+                          ${event.totalAmount.toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right">
+                          ${event.totalPaid.toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right">
+                          ${event.balance.toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">{event.branch?.branchName || "N/A"}</TableCell>
+                        <TableCell className="py-3 px-4">
+                          <EventActions event={event} onEventSaved={handleEventSaved} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Pagination */}

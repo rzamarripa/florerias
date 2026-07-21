@@ -171,6 +171,12 @@ export const MENU_METADATA: Record<string, MenuMetadata> = {
     category: "Finanzas y Reportes",
     order: 2
   },
+  "/reportes": {
+    label: "Reportes",
+    icon: Receipt,
+    category: "Finanzas y Reportes",
+    order: 3
+  },
 
   // Clientes y Lealtad
   "/panel/clientes": {

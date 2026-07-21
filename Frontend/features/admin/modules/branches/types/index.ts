@@ -50,6 +50,8 @@ export interface DeliveryLogEntry {
 
 export interface DeliveryTracking {
   shippingLimit: number;
+  hourlyArrangementCapacity?: number;
+  hourlyShippingCapacity?: number;
   deliveryLog: DeliveryLogEntry[];
 }
 
@@ -108,7 +110,11 @@ export interface CreateBranchData {
   royaltiesPercentage?: number;
   advertisingBranchPercentage?: number;
   advertisingBrandPercentage?: number;
-  deliveryTracking?: { shippingLimit: number };
+  deliveryTracking?: {
+    shippingLimit: number;
+    hourlyArrangementCapacity?: number;
+    hourlyShippingCapacity?: number;
+  };
   employees?: string[];
   employeesData?: EmployeeData[];
 }

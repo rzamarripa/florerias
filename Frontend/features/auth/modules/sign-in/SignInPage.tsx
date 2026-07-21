@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { TbLockPassword, TbMail } from "react-icons/tb";
 import { AuthError, loginService } from "./services/auth";
 import PasswordResetModal from "./components/PasswordResetModal";
@@ -36,6 +36,7 @@ const SignInPage = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
 
   const { setUser, setLoading } = useUserSessionStore();
@@ -185,17 +186,36 @@ const SignInPage = () => {
                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted">
                       <TbLockPassword className="text-muted-foreground text-lg" />
                     </span>
-                    <Input
-                      type="password"
-                      id="password"
-                      name="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      disabled={isSubmitting}
-                      className="rounded-l-none"
-                    />
+                    <div className="relative flex-1">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        id="password"
+                        name="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        disabled={isSubmitting}
+                        className="rounded-l-none pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        disabled={isSubmitting}
+                        aria-label={
+                          showPassword
+                            ? "Ocultar contraseña"
+                            : "Mostrar contraseña"
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

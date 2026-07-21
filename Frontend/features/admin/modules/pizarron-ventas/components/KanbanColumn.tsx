@@ -18,6 +18,7 @@ interface KanbanColumnProps {
   onChangeStatus?: (order: Order, newStatus: string) => void;
   onSendToShipping?: (order: Order) => void;
   onFinalizeOrder?: (order: Order) => void;
+  onDeliverToStore?: (order: Order) => void;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -34,6 +35,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onChangeStatus,
   onSendToShipping,
   onFinalizeOrder,
+  onDeliverToStore,
 }) => {
   // Configurar drop zone
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
@@ -124,6 +126,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               isLastShippingStage={isLastShippingStage}
               onSendToShipping={onSendToShipping}
               onFinalizeOrder={onFinalizeOrder}
+              onDeliverToStore={onDeliverToStore}
               stageName={title}
               stageColor={color}
             />

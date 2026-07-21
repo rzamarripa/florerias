@@ -21,6 +21,7 @@ import { reprintDeliveryTicket } from "../utils/reprintDeliveryTicket";
 import { salesService } from "../services/sales";
 import { toast } from "react-toastify";
 import { useUserSessionStore } from "@/stores/userSessionStore";
+import { useUserRoleStore } from "@/stores/userRoleStore";
 
 interface SaleActionsProps {
   sale: Sale;
@@ -42,6 +43,16 @@ const SaleActions: React.FC<SaleActionsProps> = ({
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const { user } = useUserSessionStore();
+  const userRole = useUserRoleStore((state) => state.role);
+
+  const canCancelPastDay = (() => {
+    if (userRole === "Administrador") return true;
+    const saleDate = new Date(sale.createdAt);
+    const today = new Date();
+    const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate()).getTime();
+    const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    return saleDay === todayDay;
+  })();
 
   const handleOpenPaymentModal = () => {
     setShowPaymentModal(true);
@@ -167,10 +178,12 @@ const SaleActions: React.FC<SaleActionsProps> = ({
             Editar
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={handleOpenCancelDialog} variant="destructive">
-            <X className="h-4 w-4 mr-2" />
-            Cancelar Venta
-          </DropdownMenuItem>
+          {canCancelPastDay && (
+            <DropdownMenuItem onClick={handleOpenCancelDialog} variant="destructive">
+              <X className="h-4 w-4 mr-2" />
+              Cancelar Venta
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

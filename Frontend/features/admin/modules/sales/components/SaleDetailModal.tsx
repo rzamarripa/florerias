@@ -37,6 +37,7 @@ import {
   FileText,
   XCircle,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { Sale } from "../types";
 import ActivityStream from "./ActivityStream";
@@ -152,6 +153,26 @@ const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
             <ActivityStream orderId={sale._id} />
           ) : (
             <>
+              {/* Banner de entrega con saldo pendiente */}
+              {sale.deliveryPendingReason && (
+                <div
+                  className="flex items-start mb-4 p-4 rounded-xl bg-yellow-50 text-yellow-900"
+                  role="alert"
+                >
+                  <div className="flex items-center justify-center mr-3 flex-shrink-0 w-12 h-12 rounded-xl bg-yellow-100">
+                    <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <h6 className="font-bold mb-1 text-yellow-800">
+                      Entregada con saldo pendiente
+                    </h6>
+                    <p className="mb-0 font-semibold text-yellow-800">
+                      Motivo: {sale.deliveryPendingReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Banner de Cancelacion */}
               {sale.status === "cancelado" && (
                 <div

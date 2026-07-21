@@ -112,87 +112,85 @@ const CheckTransferTable: React.FC<CheckTransferTableProps> = ({
   }
 
   return (
-    <div>
-      <div className="rounded-xl overflow-hidden shadow-sm border">
-        <Table>
-          <TableHeader className="bg-gray-50">
+    <div className="p-4">
+      <Table>
+        <TableHeader className="bg-muted/40">
+          <TableRow>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Folio</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Pago</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Concepto</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Usuario</TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">
+              Total
+            </TableHead>
+            <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">
+              Acciones
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {expenses.length === 0 ? (
             <TableRow>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Folio</TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Pago</TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Concepto</TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Usuario</TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">
-                Total
-              </TableHead>
-              <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">
-                Acciones
-              </TableHead>
+              <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                No hay gastos de Cheque/Transferencia registrados
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  No hay gastos de Cheque/Transferencia registrados
-                </TableCell>
-              </TableRow>
-            ) : (
-              <>
-                {expenses.map((expense, index) => (
-                  <TableRow key={expense._id} className="hover:bg-gray-50">
-                    <TableCell className="py-3 px-4">
-                      {(currentPage - 1) * 10 + index + 1}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 font-semibold">{expense.folio}</TableCell>
-                    <TableCell className="py-3 px-4">
-                      {new Date(expense.paymentDate).toLocaleDateString("es-MX")}
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      {expense.concept?.name || "N/A"}
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      {expense.user?.profile?.fullName || expense.user?.username}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-right font-semibold">
-                      ${expense.total.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      <div className="flex gap-2 justify-center">
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => onEdit(expense)}
-                          className="flex items-center gap-1 rounded-md px-2 py-1 font-bold"
-                        >
-                          <Pencil size={14} />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(expense._id)}
-                          className="flex items-center gap-1 rounded-md px-2 py-1"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-gray-50 font-bold">
-                  <TableCell colSpan={5} className="py-3 px-4 text-right">
-                    Total
+          ) : (
+            <>
+              {expenses.map((expense, index) => (
+                <TableRow key={expense._id} className="hover:bg-muted/30">
+                  <TableCell className="py-3 px-4">
+                    {(currentPage - 1) * 10 + index + 1}
                   </TableCell>
-                  <TableCell className="py-3 px-4 text-right">
-                    ${calculateTotal().toFixed(2)}
+                  <TableCell className="py-3 px-4 font-semibold">{expense.folio}</TableCell>
+                  <TableCell className="py-3 px-4">
+                    {new Date(expense.paymentDate).toLocaleDateString("es-MX")}
                   </TableCell>
-                  <TableCell></TableCell>
+                  <TableCell className="py-3 px-4">
+                    {expense.concept?.name || "N/A"}
+                  </TableCell>
+                  <TableCell className="py-3 px-4">
+                    {expense.user?.profile?.fullName || expense.user?.username}
+                  </TableCell>
+                  <TableCell className="py-3 px-4 text-right font-semibold">
+                    ${expense.total.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="py-3 px-4">
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onEdit(expense)}
+                        className="flex items-center gap-1 rounded-md px-2 py-1 font-bold"
+                      >
+                        <Pencil size={14} />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(expense._id)}
+                        className="flex items-center gap-1 rounded-md px-2 py-1"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+              <TableRow className="bg-muted/40 font-bold">
+                <TableCell colSpan={5} className="py-3 px-4 text-right">
+                  Total
+                </TableCell>
+                <TableCell className="py-3 px-4 text-right">
+                  ${calculateTotal().toFixed(2)}
+                </TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </>
+          )}
+        </TableBody>
+      </Table>
 
       {/* Paginacion */}
       {totalPages > 1 && (

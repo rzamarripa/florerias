@@ -170,7 +170,7 @@ const ProvidersPage: React.FC = () => {
       )}
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-4 p-4 border-b">
             <div className="relative flex-1 max-w-md">
@@ -201,17 +201,18 @@ const ProvidersPage: React.FC = () => {
             </div>
           ) : (
             <>
+              <div className="p-4">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Nombre Comercial</TableHead>
-                    <TableHead>Nombre Fiscal</TableHead>
-                    <TableHead>RFC</TableHead>
-                    <TableHead>Contacto</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground w-12">#</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre Comercial</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre Fiscal</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">RFC</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Contacto</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Empresa</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Estado</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -228,33 +229,33 @@ const ProvidersPage: React.FC = () => {
                     </TableRow>
                   ) : (
                     providers.map((provider, index) => (
-                      <TableRow key={provider._id}>
-                        <TableCell>
+                      <TableRow key={provider._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           {(pagination.page - 1) * pagination.limit + index + 1}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="font-medium">{provider.tradeName}</div>
                         </TableCell>
-                        <TableCell>{provider.legalName}</TableCell>
-                        <TableCell>{provider.rfc}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">{provider.legalName}</TableCell>
+                        <TableCell className="py-3 px-4">{provider.rfc}</TableCell>
+                        <TableCell className="py-3 px-4">
                           <div>
                             <div className="font-medium">{provider.contactName}</div>
                             <div className="text-sm text-muted-foreground">{provider.phone}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <div>
                             <div className="font-medium">{provider.company.legalName}</div>
                             <div className="text-sm text-muted-foreground">{provider.company.rfc}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge variant={provider.isActive ? "default" : "destructive"}>
                             {provider.isActive ? "Activo" : "Inactivo"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3 px-4">
                           <ProviderActions
                             provider={provider}
                             onEdit={handleEditProvider}
@@ -266,6 +267,7 @@ const ProvidersPage: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               {providers.length > 0 && (

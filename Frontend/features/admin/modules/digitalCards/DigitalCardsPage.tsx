@@ -441,64 +441,66 @@ const DigitalCardsPage: React.FC = () => {
           {searchTerm ? 'No se encontraron clientes con ese criterio' : 'No hay clientes registrados en esta empresa'}
         </div>
       ) : (
-        <Card>
+        <Card className="shadow-sm rounded-xl">
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Numero</TableHead>
-                  <TableHead>Telefono</TableHead>
-                  <TableHead>Puntos</TableHead>
-                  <TableHead className="text-center">Tarjeta Digital</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClients.map((client) => {
-                  const card = digitalCards[client._id];
-                  return (
-                    <TableRow key={client._id}>
-                      <TableCell>
-                        <div>
-                          <strong>{client.name} {client.lastName}</strong>
-                          {client.email && (
-                            <div className="text-sm text-muted-foreground">{client.email}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{client.clientNumber}</TableCell>
-                      <TableCell>{client.phoneNumber}</TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          {client.points} pts
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {card ? (
+            <div className="p-4">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Cliente</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Número</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Teléfono</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Puntos</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Tarjeta Digital</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => {
+                    const card = digitalCards[client._id];
+                    return (
+                      <TableRow key={client._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
                           <div>
-                            <small className="text-muted-foreground block">Codigo:</small>
-                            <code className="text-foreground">{card.barcode || card.passSerialNumber || 'N/A'}</code>
+                            <strong>{client.name} {client.lastName}</strong>
+                            {client.email && (
+                              <div className="text-sm text-muted-foreground">{client.email}</div>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant={card ? "outline" : "default"}
-                          size="sm"
-                          onClick={() => handleGenerateCard(client)}
-                        >
-                          <QrCode size={16} className="mr-1" />
-                          {card ? 'Ver' : 'Crear'} Tarjeta
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="py-3 px-4">{client.clientNumber}</TableCell>
+                        <TableCell className="py-3 px-4">{client.phoneNumber}</TableCell>
+                        <TableCell className="py-3 px-4">
+                          <Badge variant="default">
+                            {client.points} pts
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-center">
+                          {card ? (
+                            <div>
+                              <small className="text-muted-foreground block">Código:</small>
+                              <code className="text-foreground">{card.barcode || card.passSerialNumber || 'N/A'}</code>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-center">
+                          <Button
+                            variant={card ? "outline" : "default"}
+                            size="sm"
+                            onClick={() => handleGenerateCard(client)}
+                          >
+                            <QrCode size={16} className="mr-1" />
+                            {card ? 'Ver' : 'Crear'} Tarjeta
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

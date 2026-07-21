@@ -208,7 +208,7 @@ const BuysPage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
@@ -289,60 +289,62 @@ const BuysPage: React.FC = () => {
               <p className="text-muted-foreground mt-3">Cargando compras...</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">No.</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">ACCION</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FECHA</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">SUCURSAL</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">FORMA PAGO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">CONCEPTO</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground">DESCRIPCION</TableHead>
-                  <TableHead className="px-2 py-2 font-semibold text-muted-foreground text-right">IMPORTE</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {buys.length === 0 ? (
+            <div className="p-4">
+              <Table>
+                <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                      No se encontraron compras
-                    </TableCell>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">No.</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Acción</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Forma Pago</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Concepto</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Descripción</TableHead>
+                    <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Importe</TableHead>
                   </TableRow>
-                ) : (
-                  buys.map((buy, index) => (
-                    <TableRow key={buy._id}>
-                      <TableCell className="px-2 py-2">
-                        {(pagination.page - 1) * pagination.limit + index + 1}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        <BuyActions buy={buy} onBuySaved={handleBuySaved} />
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {new Date(buy.paymentDate).toLocaleDateString("es-MX")}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {buy.branch?.branchName || "N/A"}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">
-                        {buy.paymentMethod?.name || "N/A"}
-                      </TableCell>
-                      <TableCell className="px-2 py-2 font-semibold">
-                        {buy.concept?.name || "N/A"}
-                      </TableCell>
-                      <TableCell className="px-2 py-2">{buy.description || "-"}</TableCell>
-                      <TableCell className="px-2 py-2 text-right font-semibold">
-                        $
-                        {buy.amount.toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                </TableHeader>
+                <TableBody>
+                  {buys.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                        No se encontraron compras
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    buys.map((buy, index) => (
+                      <TableRow key={buy._id} className="hover:bg-muted/30">
+                        <TableCell className="py-3 px-4">
+                          {(pagination.page - 1) * pagination.limit + index + 1}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          <BuyActions buy={buy} onBuySaved={handleBuySaved} />
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {new Date(buy.paymentDate).toLocaleDateString("es-MX")}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {buy.branch?.branchName || "N/A"}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
+                          {buy.paymentMethod?.name || "N/A"}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 font-semibold">
+                          {buy.concept?.name || "N/A"}
+                        </TableCell>
+                        <TableCell className="py-3 px-4">{buy.description || "-"}</TableCell>
+                        <TableCell className="py-3 px-4 text-right font-semibold">
+                          $
+                          {buy.amount.toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Pagination */}

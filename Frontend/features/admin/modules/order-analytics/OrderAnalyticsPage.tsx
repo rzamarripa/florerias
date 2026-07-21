@@ -29,7 +29,7 @@ import { orderAnalyticsService } from "./services/orderAnalytics";
 import { AnalyticsDashboardData, AnalyticsFilters } from "./types";
 import { toast } from "react-toastify";
 import SalesTrendChart from "./components/SalesTrendChart";
-import CategoryPieChart from "./components/CategoryPieChart";
+import CategoryBarChart from "./components/CategoryBarChart";
 import PaymentMethodChart from "./components/PaymentMethodChart";
 import SalesByHourChart from "./components/SalesByHourChart";
 import SalesByDayChart from "./components/SalesByDayChart";
@@ -529,7 +529,7 @@ const OrderAnalyticsPage: React.FC = () => {
             <div className="relative" style={{ height: "300px" }}>
               {dashboardData?.salesByCategory &&
               dashboardData.salesByCategory.length > 0 ? (
-                <CategoryPieChart data={dashboardData.salesByCategory} />
+                <CategoryBarChart data={dashboardData.salesByCategory} />
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">

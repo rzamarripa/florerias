@@ -32,7 +32,7 @@ export const ordersService = {
 
   updateOrderStatus: async (
     orderId: string,
-    data: { status: string; cancellationReason?: string }
+    data: { status: string; cancellationReason?: string; deliveryPendingReason?: string }
   ): Promise<{ success: boolean; data: Order; message: string }> => {
     const response = await apiCall<Order>(
       `/orders/${orderId}/status`,

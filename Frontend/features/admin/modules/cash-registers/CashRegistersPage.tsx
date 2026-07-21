@@ -89,10 +89,11 @@ const CashRegistersPage: React.FC = () => {
   };
 
   const getBranchName = (cashRegister: CashRegister): string => {
-    if (typeof cashRegister.branchId === "string") {
+    // branchId puede ser null (sucursal eliminada) o string (sin poblar)
+    if (!cashRegister.branchId || typeof cashRegister.branchId === "string") {
       return "N/A";
     }
-    return cashRegister.branchId.branchName;
+    return cashRegister.branchId.branchName || "N/A";
   };
 
   const getCashierName = (cashRegister: CashRegister): string => {
@@ -102,14 +103,14 @@ const CashRegistersPage: React.FC = () => {
     if (typeof cashRegister.activeUser === "string") {
       return "N/A";
     }
-    return cashRegister.activeUser.profile.fullName;
+    return cashRegister.activeUser.profile?.fullName || "N/A";
   };
 
   const getManagerName = (cashRegister: CashRegister): string => {
-    if (typeof cashRegister.managerId === "string") {
+    if (!cashRegister.managerId || typeof cashRegister.managerId === "string") {
       return "N/A";
     }
-    return cashRegister.managerId.profile.fullName;
+    return cashRegister.managerId.profile?.fullName || "N/A";
   };
 
   const formatCurrency = (amount: number): string => {

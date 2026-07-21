@@ -1380,7 +1380,7 @@ const updateOrder = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, cancellationReason } = req.body;
+    const { status, cancellationReason, deliveryPendingReason } = req.body;
 
     if (!status) {
       return res.status(400).json({
@@ -1395,6 +1395,21 @@ const updateOrderStatus = async (req, res) => {
         success: false,
         message: 'El motivo de cancelación es requerido'
       });
+    }
+
+    // Validar que si se finaliza con saldo pendiente, debe incluir motivo
+    if (status === 'finalizado') {
+      const orderToFinalize = await Order.findById(id).select('remainingBalance');
+      if (
+        orderToFinalize &&
+        (orderToFinalize.remainingBalance || 0) > 0 &&
+        (!deliveryPendingReason || !deliveryPendingReason.trim())
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'El motivo de entrega con saldo pendiente es requerido'
+        });
+      }
     }
 
     // Si se intenta cancelar, verificar restricción de fecha
@@ -1422,11 +1437,11 @@ const updateOrderStatus = async (req, res) => {
 
       const isDifferentDay = orderDateOnly.getTime() !== todayOnly.getTime();
 
-      // Si es un día diferente y el usuario NO es Administrador ni Gerente, denegar
-      if (isDifferentDay && userRole !== 'Administrador' && userRole !== 'Gerente') {
+      // Solo el rol Administrador puede cancelar ventas de días anteriores
+      if (isDifferentDay && userRole !== 'Administrador') {
         return res.status(403).json({
           success: false,
-          message: 'Solo los administradores y gerentes pueden cancelar ventas de días anteriores'
+          message: 'Solo el administrador puede cancelar ventas de días anteriores'
         });
       }
     }
@@ -1459,6 +1474,11 @@ const updateOrderStatus = async (req, res) => {
       updateData.cancellationReason = cancellationReason.trim();
       updateData.cancelledAt = new Date();
       updateData.cancelledBy = req.user._id;
+    }
+
+    // Si se finaliza con motivo de saldo pendiente, guardarlo
+    if (status === 'finalizado' && deliveryPendingReason && deliveryPendingReason.trim()) {
+      updateData.deliveryPendingReason = deliveryPendingReason.trim();
     }
 
     const order = await Order.findByIdAndUpdate(

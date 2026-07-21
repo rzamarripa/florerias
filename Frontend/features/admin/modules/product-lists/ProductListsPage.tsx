@@ -179,7 +179,7 @@ const ProductListsPage: React.FC = () => {
       </div>
 
       {/* Filters & Table */}
-      <Card>
+      <Card className="shadow-sm rounded-xl">
         <CardContent className="p-0">
           <div className="p-4 border-b">
             <div className="relative max-w-md">
@@ -206,35 +206,27 @@ const ProductListsPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="p-4 overflow-x-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="px-2 py-2">Nombre</TableHead>
-                      <TableHead className="px-2 py-2">Sucursal</TableHead>
-                      <TableHead className="px-2 py-2">Fecha Creacion</TableHead>
-                      <TableHead className="px-2 py-2">Fecha Expiracion</TableHead>
-                      <TableHead className="px-2 py-2 text-right">
-                        Total Gastado
-                      </TableHead>
-                      <TableHead className="px-2 py-2 text-right">
-                        Ganancias Brutas
-                      </TableHead>
-                      <TableHead className="px-2 py-2 text-right">
-                        Ganancias Netas
-                      </TableHead>
-                      <TableHead className="px-2 py-2 text-center">Estado</TableHead>
-                      <TableHead className="px-2 py-2 text-center">
-                        Acciones
-                      </TableHead>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Nombre</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Sucursal</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Creación</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground">Fecha Expiración</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Total Gastado</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Ganancias Brutas</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-right">Ganancias Netas</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Estado</TableHead>
+                      <TableHead className="py-3 px-4 font-semibold text-muted-foreground text-center">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {productLists.map((productList) => {
                       const totals = calculateTotals(productList);
                       return (
-                        <TableRow key={productList._id} className="hover:bg-muted/50">
-                          <TableCell className="px-2 py-2">
+                        <TableRow key={productList._id} className="hover:bg-muted/30">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold">
                               {productList.name}
                             </div>
@@ -243,14 +235,14 @@ const ProductListsPage: React.FC = () => {
                                 productList.company?.legalName}
                             </small>
                           </TableCell>
-                          <TableCell className="px-2 py-2">
+                          <TableCell className="py-3 px-4">
                             <div className="font-semibold">
                               {productList.branch && typeof productList.branch === 'object'
                                 ? (productList.branch as any).branchName || 'Sin nombre'
                                 : 'Sin sucursal'}
                             </div>
                           </TableCell>
-                          <TableCell className="px-2 py-2">
+                          <TableCell className="py-3 px-4">
                             {new Date(productList.createdAt).toLocaleDateString(
                               "es-MX",
                               {
@@ -260,7 +252,7 @@ const ProductListsPage: React.FC = () => {
                               }
                             )}
                           </TableCell>
-                          <TableCell className="px-2 py-2">
+                          <TableCell className="py-3 px-4">
                             {new Date(
                               productList.expirationDate
                             ).toLocaleDateString("es-MX", {
@@ -269,13 +261,13 @@ const ProductListsPage: React.FC = () => {
                               day: "numeric",
                             })}
                           </TableCell>
-                          <TableCell className="px-2 py-2 text-right text-red-600 font-semibold">
+                          <TableCell className="py-3 px-4 text-right text-red-600 font-semibold">
                             ${formatNumber(totals.totalGastado)}
                           </TableCell>
-                          <TableCell className="px-2 py-2 text-right text-primary font-semibold">
+                          <TableCell className="py-3 px-4 text-right text-primary font-semibold">
                             ${formatNumber(totals.gananciasBrutas)}
                           </TableCell>
-                          <TableCell className="px-2 py-2 text-right font-bold">
+                          <TableCell className="py-3 px-4 text-right font-bold">
                             <span
                               className={
                                 totals.gananciasNetas >= 0
@@ -286,7 +278,7 @@ const ProductListsPage: React.FC = () => {
                               ${formatNumber(totals.gananciasNetas)}
                             </span>
                           </TableCell>
-                          <TableCell className="px-2 py-2 text-center">
+                          <TableCell className="py-3 px-4 text-center">
                             <Badge
                               variant={productList.status ? "default" : "secondary"}
                               className={productList.status ? "bg-green-600" : ""}
@@ -294,7 +286,7 @@ const ProductListsPage: React.FC = () => {
                               {productList.status ? "Activo" : "Inactivo"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-2 py-2">
+                          <TableCell className="py-3 px-4">
                             <ProductListActions
                               productList={productList}
                               onStatusChange={() => loadProductLists(false)}

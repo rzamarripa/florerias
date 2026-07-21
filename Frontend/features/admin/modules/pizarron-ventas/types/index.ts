@@ -68,6 +68,7 @@ export interface Order {
   orderNumber: string;
   arregloUrl?: string | null;
   arregloPath?: string | null;
+  deliveryPendingReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }

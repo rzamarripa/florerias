@@ -391,7 +391,10 @@ const CashRegisterSummaryPage: React.FC = () => {
             </h2>
             <p className="text-muted-foreground mb-0">
               {summary.cashRegister.name} -{" "}
-              {summary.cashRegister.branchId.branchName}
+              {typeof summary.cashRegister.branchId === "object" &&
+              summary.cashRegister.branchId
+                ? summary.cashRegister.branchId.branchName
+                : "N/A"}
             </p>
           </div>
         </div>

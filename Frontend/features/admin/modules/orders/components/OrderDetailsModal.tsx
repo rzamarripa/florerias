@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +75,7 @@ import { DateTimeSeparatedInput } from "@/components/ui/datetime-separated-input
 import ClientRewardsModal from "./ClientRewardsModal";
 import ClientRedeemedRewardsModal from "@/features/admin/modules/clients/components/ClientRedeemedRewardsModal";
 import StripePaymentModal from "./StripePaymentModal";
+import NoAdvanceConfirmDialog from "./NoAdvanceConfirmDialog";
 import ClientModal from "@/features/admin/modules/clients/components/ClientModal";
 import digitalCardService from "@/features/admin/modules/digitalCards/services/digitalCardService";
 import { uploadDigitalCardQR } from "@/services/firebaseStorage";
@@ -177,6 +178,11 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const [showRedeemedRewardsModal, setShowRedeemedRewardsModal] = useState(false);
   const [appliedReward, setAppliedReward] = useState<AppliedRewardInfo | null>(null);
   const [selectedClientForRewards, setSelectedClientForRewards] = useState<Client | null>(null);
+
+  // Confirmación de venta sin anticipo
+  const [showNoAdvanceDialog, setShowNoAdvanceDialog] = useState(false);
+  const bypassNoAdvanceRef = useRef(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   // Estado para pago con Stripe
   const [showStripeModal, setShowStripeModal] = useState(false);
@@ -1036,8 +1042,19 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Si se pide mandar a producción sin anticipo, pedir confirmación antes de continuar
+    if (
+      formData.sendToProduction &&
+      (formData.advance ?? 0) <= 0 &&
+      !bypassNoAdvanceRef.current
+    ) {
+      setShowNoAdvanceDialog(true);
+      return;
+    }
+    bypassNoAdvanceRef.current = false;
+
     // Para órdenes e-commerce, agregar el campo eOrder
-    const orderData = isEcommerceOrder 
+    const orderData = isEcommerceOrder
       ? { ...formData, eOrder: true }
       : formData;
 
@@ -1120,7 +1137,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     <>
       <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
         <DialogContent className="!w-[85vw] !max-w-[1300px] max-h-[92vh] p-0 gap-0 flex flex-col overflow-hidden">
-          <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col min-h-0">
             <DialogHeader className="px-6 pt-6 pb-3 border-b flex-shrink-0">
               <DialogTitle className="flex items-center gap-2">
                 <CreditCard size={20} />
@@ -2312,6 +2329,18 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
         onSave={handleSaveNewClient}
         loading={clientModalLoading}
         companyId={companyId}
+      />
+
+      {/* Confirmación de venta sin anticipo */}
+      <NoAdvanceConfirmDialog
+        show={showNoAdvanceDialog}
+        onHide={() => setShowNoAdvanceDialog(false)}
+        onConfirm={() => {
+          bypassNoAdvanceRef.current = true;
+          setShowNoAdvanceDialog(false);
+          formRef.current?.requestSubmit();
+        }}
+        isProcessing={loading}
       />
     </>
   );

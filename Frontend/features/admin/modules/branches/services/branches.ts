@@ -172,4 +172,34 @@ export const branchesService = {
     const response = await apiCall<any>(`/branches/${branchId}/delivery-status`);
     return response as any;
   },
+
+  getHourlyCapacityStatus: async (
+    branchId: string,
+    dateTime: string,
+    excludeOrderId?: string
+  ): Promise<{
+    success: boolean;
+    data: {
+      window: { start: string; end: string };
+      arrangements: {
+        capacity: number;
+        used: number;
+        remaining: number;
+        overLimit: boolean;
+      };
+      shipping: {
+        capacity: number;
+        used: number;
+        remaining: number;
+        overLimit: boolean;
+      };
+    };
+  }> => {
+    const params = new URLSearchParams({ dateTime });
+    if (excludeOrderId) params.append("excludeOrderId", excludeOrderId);
+    const response = await apiCall<any>(
+      `/branches/${branchId}/hourly-capacity?${params}`
+    );
+    return response as any;
+  },
 };

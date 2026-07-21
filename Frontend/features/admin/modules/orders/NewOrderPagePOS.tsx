@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +81,7 @@ import { discountAuthService } from "@/features/admin/modules/discount-auth/serv
 import { uploadComprobante, uploadArreglo } from "@/services/firebaseStorage";
 import { productCategoriesService } from "@/features/admin/modules/productCategories/services/productCategories";
 import { ProductCategory } from "@/features/admin/modules/productCategories/types";
+import NoAdvanceConfirmDialog from "./components/NoAdvanceConfirmDialog";
 
 const NewOrderPage = () => {
   const router = useRouter();
@@ -191,6 +192,9 @@ const NewOrderPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showNoAdvanceDialog, setShowNoAdvanceDialog] = useState(false);
+  const bypassNoAdvanceRef = useRef(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   // Obtener todos los clientes
   const fetchClients = async () => {
@@ -1077,6 +1081,18 @@ const NewOrderPage = () => {
   // Enviar formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Si se pide mandar a producción sin anticipo, pedir confirmación antes de continuar
+    if (
+      formData.sendToProduction &&
+      (formData.advance ?? 0) <= 0 &&
+      !bypassNoAdvanceRef.current
+    ) {
+      setShowNoAdvanceDialog(true);
+      return;
+    }
+    bypassNoAdvanceRef.current = false;
+
     setLoading(true);
     setError(null);
 
@@ -1353,7 +1369,7 @@ const NewOrderPage = () => {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form ref={formRef} onSubmit={handleSubmit}>
             {/* Selector de Sucursal - Solo para usuarios Redes */}
             {isSocialMedia && (
               <Card className="mb-4 shadow-sm">
@@ -2711,6 +2727,18 @@ const NewOrderPage = () => {
         }}
         storage={storage}
         onAddExtras={handleAddExtras}
+      />
+
+      {/* Confirmación de venta sin anticipo */}
+      <NoAdvanceConfirmDialog
+        show={showNoAdvanceDialog}
+        onHide={() => setShowNoAdvanceDialog(false)}
+        onConfirm={() => {
+          bypassNoAdvanceRef.current = true;
+          setShowNoAdvanceDialog(false);
+          formRef.current?.requestSubmit();
+        }}
+        isProcessing={loading}
       />
     </div>
   );

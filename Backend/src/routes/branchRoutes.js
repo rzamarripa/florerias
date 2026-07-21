@@ -14,6 +14,7 @@ import {
   getCashiersByBranch,
   getBranchesForRedesUser,
   getDailyDeliveryStatus,
+  getHourlyCapacityStatus,
 } from "../controllers/branchController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -29,6 +30,7 @@ router.get("/user/redes/branches", getBranchesForRedesUser);
 router.get("/available-managers", getAvailableManagers);
 router.get("/:id/cashiers", getCashiersByBranch);
 router.get("/:id/delivery-status", getDailyDeliveryStatus);
+router.get("/:id/hourly-capacity", getHourlyCapacityStatus);
 router.get("/:id", getBranchById);
 
 // Rutas POST

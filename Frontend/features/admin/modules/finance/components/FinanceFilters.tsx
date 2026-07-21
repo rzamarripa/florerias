@@ -205,11 +205,34 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
     control: (base: any) => ({
       ...base,
       minHeight: "42px",
+      height: "42px",
       borderRadius: "10px",
       borderColor: "#dee2e6",
       "&:hover": {
         borderColor: "var(--bs-primary)",
       },
+    }),
+    valueContainer: (base: any) => ({
+      ...base,
+      height: "42px",
+      padding: "0 8px",
+      flexWrap: "nowrap",
+      overflow: "hidden",
+    }),
+    input: (base: any) => ({
+      ...base,
+      margin: 0,
+      padding: 0,
+    }),
+    indicatorsContainer: (base: any) => ({
+      ...base,
+      height: "42px",
+    }),
+    placeholder: (base: any) => ({
+      ...base,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
     }),
     multiValue: (base: any) => ({
       ...base,
@@ -354,7 +377,7 @@ const FinanceFilters: React.FC<FinanceFiltersProps> = ({ onSearch }) => {
               loadOptions={loadClientOptions}
               value={selectedClients}
               onChange={(selected) => setSelectedClients(selected as any[])}
-              placeholder="Busca cliente(s) por nombre, teléfono o número"
+              placeholder="Buscar cliente(s)..."
               styles={customStyles}
               loadingMessage={() => "Buscando..."}
               noOptionsMessage={({ inputValue }) =>

@@ -86,7 +86,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
     royaltiesPercentage: 0,
     advertisingBranchPercentage: 0,
     advertisingBrandPercentage: 0,
-    deliveryTracking: { shippingLimit: 0 },
+    deliveryTracking: { shippingLimit: 0, hourlyArrangementCapacity: 0, hourlyShippingCapacity: 0 },
   });
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -148,7 +148,11 @@ const BranchModal: React.FC<BranchModalProps> = ({
           royaltiesPercentage: branch.royaltiesPercentage || 0,
           advertisingBranchPercentage: branch.advertisingBranchPercentage || 0,
           advertisingBrandPercentage: branch.advertisingBrandPercentage || 0,
-          deliveryTracking: { shippingLimit: branch.deliveryTracking?.shippingLimit || 0 },
+          deliveryTracking: {
+            shippingLimit: branch.deliveryTracking?.shippingLimit || 0,
+            hourlyArrangementCapacity: branch.deliveryTracking?.hourlyArrangementCapacity || 0,
+            hourlyShippingCapacity: branch.deliveryTracking?.hourlyShippingCapacity || 0,
+          },
         });
       } else {
         resetForm();
@@ -242,7 +246,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
       royaltiesPercentage: 0,
       advertisingBranchPercentage: 0,
       advertisingBrandPercentage: 0,
-      deliveryTracking: { shippingLimit: 0 },
+      deliveryTracking: { shippingLimit: 0, hourlyArrangementCapacity: 0, hourlyShippingCapacity: 0 },
     });
     setError(null);
     setUsernameAvailable(null);
@@ -400,7 +404,11 @@ const BranchModal: React.FC<BranchModalProps> = ({
             royaltiesPercentage: formData.royaltiesPercentage,
             advertisingBranchPercentage: formData.advertisingBranchPercentage,
             advertisingBrandPercentage: formData.advertisingBrandPercentage,
-            deliveryTracking: { shippingLimit: formData.deliveryTracking?.shippingLimit || 0 },
+            deliveryTracking: {
+              shippingLimit: formData.deliveryTracking?.shippingLimit || 0,
+              hourlyArrangementCapacity: formData.deliveryTracking?.hourlyArrangementCapacity || 0,
+              hourlyShippingCapacity: formData.deliveryTracking?.hourlyShippingCapacity || 0,
+            },
           };
 
           if (formData.managerId) {
@@ -866,7 +874,66 @@ const BranchModal: React.FC<BranchModalProps> = ({
                         if (value >= 0) {
                           setFormData({
                             ...formData,
-                            deliveryTracking: { shippingLimit: value },
+                            deliveryTracking: {
+                              ...(formData.deliveryTracking || {
+                                shippingLimit: 0,
+                                hourlyArrangementCapacity: 0,
+                                hourlyShippingCapacity: 0,
+                              }),
+                              shippingLimit: value,
+                            },
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Arreglos por Hora</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={formData.deliveryTracking?.hourlyArrangementCapacity || 0}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        if (value >= 0) {
+                          setFormData({
+                            ...formData,
+                            deliveryTracking: {
+                              ...(formData.deliveryTracking || {
+                                shippingLimit: 0,
+                                hourlyArrangementCapacity: 0,
+                                hourlyShippingCapacity: 0,
+                              }),
+                              hourlyArrangementCapacity: value,
+                            },
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Envíos por Hora</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={formData.deliveryTracking?.hourlyShippingCapacity || 0}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        if (value >= 0) {
+                          setFormData({
+                            ...formData,
+                            deliveryTracking: {
+                              ...(formData.deliveryTracking || {
+                                shippingLimit: 0,
+                                hourlyArrangementCapacity: 0,
+                                hourlyShippingCapacity: 0,
+                              }),
+                              hourlyShippingCapacity: value,
+                            },
                           });
                         }
                       }}

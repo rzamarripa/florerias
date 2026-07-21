@@ -114,6 +114,16 @@ const branchSchema = new Schema(
         min: [0, "El límite de envíos debe ser mayor o igual a 0"],
         default: 0,
       },
+      hourlyArrangementCapacity: {
+        type: Number,
+        min: [0, "La capacidad de arreglos por hora debe ser mayor o igual a 0"],
+        default: 0,
+      },
+      hourlyShippingCapacity: {
+        type: Number,
+        min: [0, "La capacidad de envíos por hora debe ser mayor o igual a 0"],
+        default: 0,
+      },
       deliveryLog: [
         {
           orderId: {
